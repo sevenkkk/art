@@ -1,10 +1,8 @@
 import React from 'react'
 import { ChangeEvent, useEffect } from 'react'
-import { useQuery, useSubmit } from 'art'
-import { observer } from 'mobx-react'
-import { makeAutoObservable } from 'mobx'
+import { useQuery, resso } from 'art'
 
-export const store = makeAutoObservable({
+export const store = resso({
   tabsList: ['popular', 'realTime', 'month'],
   index: 0,
   count: 0
@@ -37,7 +35,7 @@ type LiveMode = {
   nickname: string
   no: number
 }
-export const ListDiv = observer(({ type }: ListDivPros) => {
+export const ListDiv = ({ type }: ListDivPros) => {
   const store = useQuery<LiveMode[], { type: string }>(
     '/app/live/streamer/ranking/list',
     {
@@ -57,23 +55,21 @@ export const ListDiv = observer(({ type }: ListDivPros) => {
       // refreshOnWindowFocus: true,
       // refreshOnWindowFocusTimespanMs: 5000,
       cache: () => [type],
-      onSuccess: () => {}
+      onSuccess: () => {
+        console.log(store)
+      }
     },
     [type]
   )
 
-  const submit = useSubmit<{ status: string }>('/health', {
+  /*const submit = useSubmit<{ status: string }>('/health', {
     manual: false,
     convertRes: (res) => ({ success: true, data: res.data.status })
-  })
+  })*/
 
-  const { data, isBusy, run, error } = store
+  const { data, isBusy, run } = store
 
-  const { data: healthData } = submit
-
-  console.log(healthData)
-
-  console.log(error)
+  console.log(data)
 
   useEffect(() => {
     setTimeout(() => {
@@ -100,9 +96,9 @@ export const ListDiv = observer(({ type }: ListDivPros) => {
       <button onClick={() => store.refresh()}>点击刷新</button>
       <input onChange={handleChange} />
 
-      <button onClick={() => store.setPage({ current: 2 })}>
+      <button onClick={() => store.setPageRun({ current: 2 })}>
         点击获取第二页
       </button>
     </>
   )
-})
+}

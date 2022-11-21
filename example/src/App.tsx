@@ -5,9 +5,6 @@ import { AxiosResponse } from 'axios'
 import { Tabs } from './compontents/Tabs'
 import { Art, UseResult } from 'art'
 import React from 'react'
-import { makeAutoObservable } from 'mobx'
-
-export const store = makeAutoObservable({ count: 0, text: 'hello' })
 
 Art.setup({
   baseURL: 'https://api-t.bagel7777.com',
@@ -27,13 +24,9 @@ Art.setup({
 })
 
 function App() {
-  const { count } = store // destructure at top first 🥷
-  console.log(count)
 
   return (
     <>
-      {count}
-      <button onClick={() => store.count++}>+</button>
       {/*<Child/>*/}
       <Tabs />
     </>
