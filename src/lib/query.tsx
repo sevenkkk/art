@@ -21,21 +21,26 @@ import {
   UseResult,
   ViewState
 } from './model'
-import resso from 'resso'
 import { useCommonHooks } from './hooks'
+import { makeAutoObservable } from 'mobx'
 
-export function createQueryStore<
-  R = Record<string, any> | string,
-  P = Record<string, any>
->(request: RequestType<P> | string, config?: QueryConfig<R, P>) {
+export function makeQuery<
+  TData = Record<string, any> | string,
+  Tbody = Record<string, any>
+>(request: RequestType<Tbody> | string, config?: QueryConfig<TData, Tbody>) {
   // 得到当前配置
-  const myConfig = getMyConfig<R, P>(config) as QueryConfig<R, P>
+  const myConfig = getMyConfig<TData, Tbody>(config) as QueryConfig<
+    TData,
+    Tbody
+  >
 
   // 当前请求
   let currentRequest: RequestResult | undefined
 
   // 创建store
-  const store: QueryStoreType<R, P> = resso<QueryStoreType<R, P>>({
+  const store: QueryStoreType<TData, Tbody> = makeAutoObservable<
+    QueryStoreType<TData, Tbody>
+  >({
     ...getDefaultState(),
     current: config?.usePage ? 1 : undefined,
     pageSize: config?.usePage ? config?.pageSize ?? 10 : undefined,
@@ -44,21 +49,22 @@ export function createQueryStore<
     setStatus: (status: ViewState) => {
       setStatus(store, status)
     },
-    setBody: (inBody: Partial<P>, replace = false) => {
-      setBody<P>(store, inBody, replace)
+    setBody: (inBody: Partial<Tbody>, replace = false) => {
+      setBody<Tbody>(store, inBody, replace)
     },
     setPage: (config) => {
       setPage(config, store)
     },
-    setPageRun: (config): Promise<UseResult<R>> => setPageRun(config, store),
-    setData: (data?: R) => {
+    setPageRun: (config): Promise<UseResult<TData>> =>
+      setPageRun(config, store),
+    setData: (data?: TData) => {
       store.data = data
     },
-    refresh: (config): Promise<UseResult<R>> => {
+    refresh: (config): Promise<UseResult<TData>> => {
       return refresh(myConfig, store, request, currentRequest, config)
     },
-    run: doRun<R, P>(
-      (body?: Partial<P>, config?: QueryRunConfig) =>
+    run: doRun<TData, Tbody>(
+      (body?: Partial<Tbody>, config?: QueryRunConfig) =>
         getRequestFun(myConfig, store, request, currentRequest, body, config),
       myConfig
     ),
@@ -77,14 +83,14 @@ export function createQueryStore<
 }
 
 export function useQuery<
-  R = Record<string, any> | string,
-  P = Record<string, any>
+  TData = Record<string, any> | string,
+  Tbody = Record<string, any>
 >(
-  request: RequestType<P> | string,
-  config?: QueryHooksConfig<R, P>,
+  request: RequestType<Tbody> | string,
+  config?: QueryHooksConfig<TData, Tbody>,
   deps?: DependencyList
 ) {
-  const store = useMemo(() => createQueryStore(request, config), deps ?? [])
+  const store = useMemo(() => makeQuery(request, config), deps ?? [])
   useCommonHooks(store, 'query', config, deps)
   return store
 }

@@ -1,9 +1,10 @@
 import React from 'react'
-import { ChangeEvent, memo, useEffect } from 'react'
-import resso from 'resso'
+import { ChangeEvent, useEffect } from 'react'
 import { useQuery, useSubmit } from 'art'
+import { observer } from 'mobx-react'
+import { makeAutoObservable } from 'mobx'
 
-export const store = resso({
+export const store = makeAutoObservable({
   tabsList: ['popular', 'realTime', 'month'],
   index: 0,
   count: 0
@@ -36,7 +37,7 @@ type LiveMode = {
   nickname: string
   no: number
 }
-export const ListDiv = memo(({ type }: ListDivPros) => {
+export const ListDiv = observer(({ type }: ListDivPros) => {
   const store = useQuery<LiveMode[], { type: string }>(
     '/app/live/streamer/ranking/list',
     {

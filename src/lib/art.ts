@@ -3,8 +3,9 @@ import { AxiosInstance, AxiosStatic } from './axios/axios'
 
 export interface TemplateConfigOptions {
   baseURL?: string
+  httpType?: 'axios'
   axios?: {
-    axios: AxiosStatic | any
+    instance: AxiosInstance
     instanceCallback: (instance: AxiosInstance) => void
   }
   showErrorMessage?: (res: UseResult) => void
@@ -12,16 +13,39 @@ export interface TemplateConfigOptions {
   startLoading?: () => void
   endLoading?: () => void
   convertRes?: (res: any) => UseResult
-  convertError?: (resError: any) => UseResult
+  convertError?: (resError: any, defaultResult: UseResult) => UseResult
   handlePage?: (current: number, pageSize: number) => any
   handleHttpError?: <T>(resError: T) => void
 }
 
 export class Art {
-  static axios?: AxiosInstance
+  static axiosInstance?: AxiosInstance
+
+  static getAxiosInstance() {
+    if (this.axiosInstance) {
+      return this.axiosInstance
+    } else {
+      return this.getAxios()
+    }
+  }
+
+  static axios?: AxiosStatic
+
+  static getAxios() {
+    if (this.axios) {
+      return this.axios
+    } else {
+      this.axios = require('axios').default
+      if (!this.axios) {
+        throw new Error('Need to add axios dependency')
+      }
+      return this.axios
+    }
+  }
 
   // Default global configuration
   static config: TemplateConfigOptions = {
+    httpType: 'axios',
     showErrorMessage: (res) => {
       console.log(res)
     },
@@ -50,12 +74,16 @@ export class Art {
   static setup(config?: TemplateConfigOptions): void {
     if (config) {
       this.config = { ...this.config, ...config }
-      if (this.config.axios?.axios) {
-        this.axios = this.config.axios.axios.create({
-          baseURL: this.config.baseURL
-        })
-        if (this.config.axios.instanceCallback) {
-          this.config.axios.instanceCallback(this.axios!)
+      if (this.config.httpType === 'axios') {
+        if (this.config.axios?.instance) {
+          this.axiosInstance = this.config.axios.instance
+          if (this.config.axios.instanceCallback) {
+            this.config.axios.instanceCallback(this.axios!)
+          }
+        } else {
+          this.axiosInstance = this.getAxios().create({
+            baseURL: this.config.baseURL
+          })
         }
       }
     }

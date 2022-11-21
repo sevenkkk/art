@@ -47,3 +47,13 @@ export function useCommonHooks(
     }
   }, [visibilityChange])
 }
+
+export function useAutoRun<T>(
+  store: StoreType<any, T>,
+  body?: T,
+  deps?: DependencyList
+) {
+  useEffect(() => {
+    store.run(body).then()
+  }, deps ?? [])
+}

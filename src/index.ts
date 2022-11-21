@@ -1,6 +1,6 @@
 import { Art } from './lib/art'
-import { createQueryStore, useQuery } from './lib/query'
-import { createSubmitStore, useSubmit } from './lib/submit'
-import resso from 'resso'
+import { makeQuery, useQuery } from './lib/query'
+import { makeSubmit, useSubmit } from './lib/submit'
+import { useAutoRun } from './lib/hooks'
 export * from './lib/model'
-export { Art, resso, createQueryStore, useQuery, createSubmitStore, useSubmit }
+export { Art, makeQuery, useQuery, makeSubmit, useSubmit, useAutoRun }

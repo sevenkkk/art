@@ -1,15 +1,15 @@
-import { createQueryStore } from 'art'
+import { makeQuery } from 'art'
 type EventModel = { eventID: string; eventName: string }
 
-export const eventListStore = createQueryStore<EventModel[]>(
+export const eventListStore = makeQuery<EventModel[]>(
   '/app/event/popup/list',
   {
-    successCallback: () => {
+    onSuccess: () => {
       eventListStore2.run().then()
     }
   }
 )
 
-export const eventListStore2 = createQueryStore<EventModel[]>(
+export const eventListStore2 = makeQuery<EventModel[]>(
   '/app/event/popup/list'
 )

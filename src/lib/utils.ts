@@ -18,7 +18,8 @@ import {
 } from './model'
 import { Art } from './art'
 import { clearCache, createCacheKey, getCache, setCache } from './cache'
-import { getAxiosRequest, handleError } from './axios'
+import { getAxiosRequest, handleAxiosError } from './axios'
+import { ID } from './ID'
 
 /**
  * 默认状态
@@ -33,7 +34,8 @@ export function getDefaultState() {
     lastRequestTime: undefined,
     body: undefined,
     originData: undefined,
-    data: undefined
+    data: undefined,
+    key: ID.generate()
   }
 }
 
@@ -121,9 +123,11 @@ export function autoClear(store: { clear: () => void }, autoClear?: boolean) {
 /**
  * 获取当前配置项目
  * @param config
+ * @param type
  */
 export function getMyConfig<R, P>(
-  config?: QueryConfig<R, P>
+  config?: QueryConfig<R, P>,
+  type: 'submit' | 'query' = 'query'
 ): QueryConfig<R, P> {
   // 初始化默认配置
   const defaultConfig = {
@@ -134,7 +138,7 @@ export function getMyConfig<R, P>(
     cacheTime: 300000,
     staleTime: 0,
     showMessage: true,
-    showSuccessMessage: false,
+    showSuccessMessage: type === 'submit',
     showErrorMessage: true
   } as QueryConfig<R, P>
   // 得到当前配置
@@ -233,6 +237,7 @@ export async function doRequest<T, P>(
 
   // 结束loading
   handleEndLoading(config)
+
   return myRes
 }
 
@@ -260,7 +265,7 @@ function handleCallback<T, P>(config: QueryConfig<T, P>, res: UseResult<T>) {
   // 请求结束
   if (res.success) {
     if (config.onSuccess) {
-      config.onSuccess(res, false)
+      config.onSuccess(res.data!, res, false)
     }
   } else if (!res.isCancel) {
     if (config.onError) {
@@ -280,7 +285,7 @@ function handleCallback<T, P>(config: QueryConfig<T, P>, res: UseResult<T>) {
 function handleRequestCatch(e: any, request: RequestResult): UseResult {
   let result = { success: false, isCancel: false, message: e } as UseResult
   if (request.type === 'axios') {
-    result = handleError(e)
+    result = handleAxiosError(e)
   }
 
   if (Art.config.handleHttpError) {
@@ -303,7 +308,7 @@ export function getRequest(
 ): RequestResult {
   let _request: () => Promise<any>
 
-  let source: any
+  let _source: any
 
   if (typeof request === 'function') {
     _request = () => request(body)
@@ -319,19 +324,25 @@ export function getRequest(
       })
     }
 
-    if (Art.config.axios != null) {
-      source = Art.config.axios?.axios.CancelToken.source()
-      _request = () =>
-        getAxiosRequest(_method, url, body ?? (isPost ? {} : undefined), {
-          cancelToken: source.token
-        })
+    if (Art.config.httpType === 'axios') {
+      const { request, source } = getAxiosRequest(
+        _method,
+        url,
+        body ?? (isPost ? {} : undefined)
+      )
+      _request = request
+      _source = source
     } else {
       throw new Error(
         'Art must pass in the http object, currently only supports axios'
       )
     }
   }
-  return { request: _request, type: 'axios', source }
+  return {
+    request: _request,
+    type: Art.config.httpType ?? 'axios',
+    source: _source
+  }
 }
 
 export function setBody<P>(
@@ -506,7 +517,7 @@ export function getCacheRequest<R, P>(
 ): Promise<UseResult<R>> {
   const res = cache.data
   if (config.onSuccess) {
-    config.onSuccess(res, true)
+    config.onSuccess(res.data!, res, true)
   }
   if (cache.pagination) {
     try {
@@ -657,6 +668,7 @@ export function getRequestFun<R, P>(
     _body = getPostBody(_body, myConfig.postBody)
     // 获取请求体
     currentRequest = getRequest(request, _body, myConfig.method)
+
     // 发送请求
     return doRequest<R, P>(currentRequest, store, myConfig, (res) =>
       setResData(res, myConfig, store, request)

@@ -20,36 +20,41 @@ import {
   UseResult,
   ViewState
 } from './model'
-import resso from 'resso'
 import { useCommonHooks } from './hooks'
+import { makeAutoObservable } from 'mobx'
 
-export function createSubmitStore<
-  R = Record<string, any> | string,
-  P = Record<string, any>
->(request: RequestType<P> | string, config?: SubmitConfig<R, P>) {
+export function makeSubmit<
+  Tbody = Record<string, any>,
+  TData = Record<string, any> | string
+>(request: RequestType<Tbody> | string, config?: SubmitConfig<TData, Tbody>) {
   // 得到当前配置
-  const myConfig = getMyConfig<R, P>(config) as QueryConfig<R, P>
+  const myConfig = getMyConfig<TData, Tbody>(config, 'submit') as QueryConfig<
+    TData,
+    Tbody
+  >
 
   // 当前请求
   let currentRequest: RequestResult
 
   // 创建store
-  const store: SubmitStoreType<R, P> = resso<SubmitStoreType<R, P>>({
+  const store: SubmitStoreType<TData, Tbody> = makeAutoObservable<
+    SubmitStoreType<TData, Tbody>
+  >({
     ...getDefaultState(),
     setStatus: (status: ViewState) => {
       setStatus(store, status)
     },
-    setBody: (inBody: Partial<P>, replace = false) => {
-      setBody<P>(store, inBody, replace)
+    setBody: (inBody: Partial<Tbody>, replace = false) => {
+      setBody<Tbody>(store, inBody, replace)
     },
-    setData: (data?: R) => {
+    setData: (data?: TData) => {
       store.data = data
     },
-    refresh: (config): Promise<UseResult<R>> => {
+    refresh: (config): Promise<UseResult<TData>> => {
       return refresh(myConfig, store, request, currentRequest, config)
     },
-    run: doRun<R, P>(
-      (body?: Partial<P>, config?: QueryRunConfig) =>
+    run: doRun<TData, Tbody>(
+      (body?: Partial<Tbody>, config?: QueryRunConfig) =>
         getRequestFun(myConfig, store, request, currentRequest, body, config),
       myConfig
     ),
@@ -66,14 +71,14 @@ export function createSubmitStore<
 }
 
 export function useSubmit<
-  R = Record<string, any> | string,
-  P = Record<string, any>
+  Tbody = Record<string, any>,
+  TData = Record<string, any> | string
 >(
-  request: RequestType<P> | string,
-  config?: HooksConfig<R, P>,
+  request: RequestType<Tbody> | string,
+  config?: HooksConfig<TData, Tbody>,
   deps?: DependencyList
 ) {
-  const store = useMemo(() => createSubmitStore(request, config), deps ?? [])
+  const store = useMemo(() => makeSubmit(request, config), deps ?? [])
 
   useCommonHooks(store, 'submit', config, deps)
 

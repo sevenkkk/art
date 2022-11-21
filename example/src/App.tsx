@@ -1,16 +1,15 @@
 import { A } from './compontents/A'
 import { B } from './compontents/B'
 import { memo } from 'react'
-import axios, { AxiosResponse } from 'axios'
+import { AxiosResponse } from 'axios'
 import { Tabs } from './compontents/Tabs'
-import resso from 'resso'
 import { Art, UseResult } from 'art'
 import React from 'react'
+import { makeAutoObservable } from 'mobx'
 
-export const store = resso({ count: 0, text: 'hello' })
+export const store = makeAutoObservable({ count: 0, text: 'hello' })
 
 Art.setup({
-  axios: axios,
   baseURL: 'https://api-t.bagel7777.com',
   handlePage: (current, pageSize) => {
     return { page: current, pageSize }
