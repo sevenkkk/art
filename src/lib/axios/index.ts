@@ -2,7 +2,7 @@ import { Art } from '../art'
 import { AxiosError, AxiosRequestConfig, Method } from './axios'
 
 export function getAxiosRequest(method: Method, url: string, body: any) {
-  const source = Art.getAxios().CancelToken.source()
+  const source = Art.axios!.CancelToken.source()
   const request = () =>
     _getAxiosRequest(method, url, body, { cancelToken: source.token })
   return { request, source }
@@ -17,20 +17,20 @@ export function _getAxiosRequest(
   switch (method) {
     case 'POST':
     case 'post':
-      return Art.getAxiosInstance().post(url, body, config)
+      return Art.axiosInstance!.post(url, body, config)
     case 'PUT':
     case 'put':
-      return Art.getAxiosInstance().put(url, body, config)
+      return Art.axiosInstance!.put(url, body, config)
     case 'DELETE':
     case 'delete':
-      return Art.getAxiosInstance().delete(url, config)
+      return Art.axiosInstance!.delete(url, config)
     default:
-      return Art.getAxiosInstance().get(url, config)
+      return Art.axiosInstance!.get(url, config)
   }
 }
 
 export function handleAxiosError(e: any) {
-  if (Art.getAxios()?.isCancel(e)) {
+  if (Art.axios?.isCancel(e)) {
     return { success: false, isCancel: true, message: e.message }
   } else {
     const response = e.response

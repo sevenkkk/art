@@ -8,7 +8,7 @@ import React from 'react'
 
 Art.setup({
   baseURL: 'https://api-t.bagel7777.com',
-  handlePage: (current, pageSize) => {
+  convertPage: (current, pageSize) => {
     return { page: current, pageSize }
   },
   convertRes: (res: AxiosResponse): UseResult => {

@@ -6,11 +6,11 @@
   "license": "MIT",
   "repository": "seven/art",
   "main": "dist/index.js",
-  "module": "dist/index.js",
+  "module": "dist/index.modern.mjs",
   "source": "src/index.ts",
   "exports": {
     "require": "./dist/index.js",
-    "default": "./dist/index.js"
+    "default": "./dist/index.modern.mjs"
   },
   "engines": {
     "node": ">=10"

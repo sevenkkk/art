@@ -68,19 +68,19 @@ export function updateDefaultBody<P>(
 /**
  * 添加分页请求参数
  * @param store
- * @param usePage 是否使用分页
+ * @param pagination 是否使用分页
  */
 export function handlePageBody<R, P>(
   store: StoreType<R, P>,
-  usePage?: boolean
+  pagination?: boolean
 ): any {
   let _body = store.body as any
-  if (usePage) {
+  if (pagination) {
     const _store = store as QueryStoreType<R, P>
-    if (Art.config.handlePage) {
+    if (Art.config.convertPage) {
       _body = {
         ...(_body ?? {}),
-        ...Art.config.handlePage(_store.current!, _store.pageSize!)
+        ...Art.config.convertPage(_store.current!, _store.pageSize!)
       }
     } else {
       _body = {
@@ -324,7 +324,7 @@ export function getRequest(
       })
     }
 
-    if (Art.config.httpType === 'axios') {
+    if (Art.config.axios) {
       const { request, source } = getAxiosRequest(
         _method,
         url,
@@ -334,13 +334,13 @@ export function getRequest(
       _source = source
     } else {
       throw new Error(
-        'Art must pass in the http object, currently only supports axios'
+        '[art] Please pass in a custom request plugin, currently only supports axios'
       )
     }
   }
   return {
     request: _request,
-    type: Art.config.httpType ?? 'axios',
+    type: 'axios',
     source: _source
   }
 }
@@ -472,7 +472,7 @@ export function setStoreCacheData<R, P>(
 
   let pagination: PaginationType | undefined
   try {
-    if (config.usePage) {
+    if (config.pagination) {
       const { current, pageSize, total, offset } = store as QueryStoreType<R, P>
       pagination = { current: current!, pageSize: pageSize!, total, offset }
     }
@@ -565,7 +565,7 @@ export function getCacheKey<R, P>(
   } else {
     key = createCacheKey(request as string)
   }
-  if (config.usePage) {
+  if (config.pagination) {
     const { current, pageSize } = store as QueryStoreType<R, P>
     return `${key}_${current}_${pageSize}`
   }
@@ -663,7 +663,7 @@ export function getRequestFun<R, P>(
     // 设置body
     updateDefaultBody<P>(store, myConfig.defaultBody, body)
     // 处理分页
-    let _body = handlePageBody(store, myConfig.usePage)
+    let _body = handlePageBody(store, myConfig.pagination)
     // 获取准备提交的请求体
     _body = getPostBody(_body, myConfig.postBody)
     // 获取请求体
@@ -686,7 +686,7 @@ function setResData<R, P>(
   if (res.success) {
     if (myConfig.isDefaultSet) {
       store.setData(res.data)
-      if (myConfig.usePage) {
+      if (myConfig.pagination) {
         ;(store as QueryStoreType).total = res.total ?? 0
       }
     }

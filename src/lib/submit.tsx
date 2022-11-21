@@ -21,7 +21,7 @@ import {
   ViewState
 } from './model'
 import { useCommonHooks } from './hooks'
-import resso from './resso'
+import { getObserver } from './observer'
 
 export function makeSubmit<
   Tbody = Record<string, any>,
@@ -36,15 +36,8 @@ export function makeSubmit<
   // 当前请求
   let currentRequest: RequestResult
 
-  let makeObservable = resso
-
-  const mobx = require('mobx').default
-  if (mobx) {
-    makeObservable = mobx.makeAutoObservable
-  }
-
   // 创建store
-  const store: SubmitStoreType<TData, Tbody> = makeObservable<
+  const store: SubmitStoreType<TData, Tbody> = getObserver()<
     SubmitStoreType<TData, Tbody>
   >({
     ...getDefaultState(),

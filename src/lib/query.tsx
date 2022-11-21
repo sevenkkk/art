@@ -22,7 +22,7 @@ import {
   ViewState
 } from './model'
 import { useCommonHooks } from './hooks'
-import resso from './resso'
+import { getObserver } from './observer'
 
 export function makeQuery<
   TData = Record<string, any> | string,
@@ -37,20 +37,13 @@ export function makeQuery<
   // 当前请求
   let currentRequest: RequestResult | undefined
 
-  let makeObservable = resso
-
-  const makeAutoObservable = require('mobx')?.makeAutoObservable
-  if (makeAutoObservable) {
-    makeObservable = makeAutoObservable
-  }
-
   // 创建store
-  const store: QueryStoreType<TData, Tbody> = makeObservable<
+  const store: QueryStoreType<TData, Tbody> = getObserver()<
     QueryStoreType<TData, Tbody>
   >({
     ...getDefaultState(),
-    current: config?.usePage ? 1 : undefined,
-    pageSize: config?.usePage ? config?.pageSize ?? 10 : undefined,
+    current: config?.pagination ? 1 : undefined,
+    pageSize: config?.pagination ? config?.pageSize ?? 10 : undefined,
     total: 0,
     offset: undefined,
     setStatus: (status: ViewState) => {
