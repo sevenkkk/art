@@ -1,13 +1,17 @@
 import { A } from './compontents/A'
 import { B } from './compontents/B'
 import { memo } from 'react'
-import { AxiosResponse } from 'axios'
+import axios, { AxiosResponse } from 'axios'
 import { Tabs } from './compontents/Tabs'
 import { Art, UseResult } from 'art'
 import React from 'react'
+import Toast from 'light-toast'
 
 Art.setup({
   baseURL: 'https://api-t.bagel7777.com',
+  axios: {
+    axios
+  },
   convertPage: (current, pageSize) => {
     return { page: current, pageSize }
   },
@@ -20,11 +24,16 @@ Art.setup({
       data: payload,
       total: count
     }
+  },
+  startLoading: () => {
+    Toast.loading('')
+  },
+  endLoading: () => {
+    Toast.hide()
   }
 })
 
 function App() {
-
   return (
     <>
       {/*<Child/>*/}

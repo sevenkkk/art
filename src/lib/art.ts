@@ -1,6 +1,6 @@
 import { UseResult } from './model'
 import { AxiosInstance, AxiosStatic } from './axios/axios'
-import resso from './resso'
+import resso from './obs/resso'
 
 export interface TemplateConfigOptions {
   baseURL?: string

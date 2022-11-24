@@ -1,15 +1,14 @@
 import { DependencyList, useEffect } from 'react'
-import { HooksConfig, StoreType } from '../model'
 import { useBrowserPageChange } from './browser-page-hooks'
+import { FetchStoreType, HooksFetchConfig } from '../model'
 
 export function useCommonHooks(
-  store: StoreType,
-  type: 'submit' | 'query',
-  config?: HooksConfig,
+  store: FetchStoreType,
+  config?: HooksFetchConfig,
   deps?: DependencyList
 ) {
   useEffect(() => {
-    const manual = config?.manual ?? type === 'submit'
+    const manual = config?.manual ?? config?.submit ?? false
     if (!manual) {
       store.run().then()
     }
@@ -49,7 +48,7 @@ export function useCommonHooks(
 }
 
 export function useAutoRun<T>(
-  store: StoreType<any, T>,
+  store: FetchStoreType<any, T>,
   body?: T,
   deps?: DependencyList
 ) {

@@ -55,7 +55,7 @@ export type BaseConfig<R = unknown, P = unknown> = {
   endLoading?: () => void // 结束loading回调
   defaultBody?: DefaultBodyType<P> // 默认请求体
   method?: Method // 方法
-  postBody?: (body: QueryBody<P>) => any // 转换body
+  postBody?: (body: FetchBody<P>) => any // 转换body
   autoClear?: boolean // 是否自动清空
   showMessage?: boolean // 是否显示成功失败消息
   showErrorMessage?: boolean // 是否显示错误消息
@@ -71,6 +71,7 @@ export type BaseConfig<R = unknown, P = unknown> = {
   cache?: boolean | string | ((body?: P) => string[]) // 缓存key
   cacheTime?: number // 设置缓存数据回收时间 默认缓存数据 5 分钟后回收
   staleTime?: number // 缓存数据保持新鲜时间
+  submit?: boolean // 是否是提交请求
 }
 
 export type ErrorType = {
@@ -85,21 +86,18 @@ export type StorePageConfig = {
   pageSize?: number // 每页个数
 }
 
-export type SubmitConfig<R = unknown, P = unknown> = BaseConfig<R, P> &
-  QueryRunConfig
-
-export type QueryConfig<R = unknown, P = unknown> = BaseConfig<R, P> &
-  QueryRunConfig &
+export type FetchConfig<R = unknown, P = unknown> = BaseConfig<R, P> &
+  FetchRunConfig &
   StorePageConfig
 
 export type RefreshConfigType = { status?: boolean; loading?: boolean }
 
-export type QueryRunConfig = RefreshConfigType & {
+export type FetchRunConfig = RefreshConfigType & {
   refresh?: boolean // 是否刷新
   replaceBody?: boolean // 替换body
 }
 
-export type HooksConfig<R = unknown, P = unknown> = SubmitConfig<R, P> & {
+export type HooksFetchConfig<R = unknown, P = unknown> = FetchConfig<R, P> & {
   manual?: boolean // 是否手动触发
   pollingIntervalMs?: number
   refreshOnWindowFocus?: boolean
@@ -107,31 +105,28 @@ export type HooksConfig<R = unknown, P = unknown> = SubmitConfig<R, P> & {
   refreshOnWindowFocusTimespanMs?: number // 重新请求间隔，单位为毫秒
 }
 
-export type QueryHooksConfig<R, P> = QueryConfig<R, P> & HooksConfig<R, P>
-
-export type BaseQueryStoreType = {
+export type FetchStatusStoreType = {
   key: string // key
   status: ViewState // 状态
   isBusy: boolean // 正在加载
   isError: boolean // 发生错误
   isEmpty?: boolean // 空数据
-  setStatus: (status: ViewState) => void // 设置状态
-  lastRequestTime?: number // 最后请求时间
   error?: ErrorType // 错误状态
+  setStatus: (status: ViewState) => void // 设置状态
 }
 
-export type QueryBodyStoreType<P> = {
+export type FetchBodyStoreType<P> = {
   body?: Partial<P> // 请求体
   setBody: (body: Partial<P>, replace?: boolean) => void // 设置请求体
 }
 
-export type QueryDataStoreType<R = unknown> = {
+export type FetchDataStoreType<R = unknown> = {
   originData?: any // 请求数据原始值
   data?: R // 请求数据当前值
   setData: (data?: R) => void // 设置当前data
 }
 
-export type QueryPageStoreType<R = unknown> = {
+export type FetchPageStoreType<R = unknown> = {
   current?: number // 当前页码
   pageSize?: number // 分页数量
   total: number // 总数
@@ -144,27 +139,19 @@ export type QueryPageStoreType<R = unknown> = {
   loadMore?: () => Promise<UseResult<R>> // 加载更多
 }
 
-export type QueryRunStoreType<R, P> = {
+export type FetchRunStoreType<R, P> = {
+  lastRequestTime?: number // 最后请求时间
   cancel: (message?: string) => void
-  run: (body?: Partial<P>, config?: QueryRunConfig) => Promise<UseResult<R>>
+  run: (body?: Partial<P>, config?: FetchRunConfig) => Promise<UseResult<R>>
   refresh: (config?: RefreshConfigType) => Promise<UseResult<R>>
   clear: () => void
 }
 
-export type StoreType<R = unknown, P = unknown> =
-  | QueryStoreType<R, P>
-  | SubmitStoreType<R, P>
-
-export type QueryStoreType<R = unknown, P = unknown> = BaseQueryStoreType &
-  QueryBodyStoreType<P> &
-  QueryDataStoreType<R> &
-  QueryPageStoreType<R> &
-  QueryRunStoreType<R, P>
-
-export type SubmitStoreType<R = unknown, P = unknown> = BaseQueryStoreType &
-  QueryBodyStoreType<P> &
-  QueryDataStoreType<R> &
-  QueryRunStoreType<R, P>
+export type FetchStoreType<R = unknown, P = unknown> = FetchStatusStoreType &
+  FetchBodyStoreType<P> &
+  FetchDataStoreType<R> &
+  FetchPageStoreType<R> &
+  FetchRunStoreType<R, P>
 
 export type PaginationType = {
   current: number
@@ -186,4 +173,4 @@ export type RequestResult = {
   source?: any
 }
 
-export type QueryBody<P> = Partial<P> & { current?: number; pageSize?: number }
+export type FetchBody<P> = Partial<P> & { current?: number; pageSize?: number }

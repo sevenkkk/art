@@ -1,43 +1,25 @@
 import {
   CachedData,
   DefaultBodyType,
+  FetchBody,
+  FetchConfig,
+  FetchRunConfig,
+  FetchStoreType,
   GetDefaultBody,
   Method,
   PaginationType,
-  QueryBody,
-  QueryConfig,
-  QueryRunConfig,
-  QueryStoreType,
   RefreshConfigType,
   RequestResult,
   RequestType,
-  StoreType,
-  SubmitStoreType,
   UseResult,
   ViewState
-} from './model'
-import { Art } from './art'
-import { clearCache, createCacheKey, getCache, setCache } from './cache'
-import { getAxiosRequest, handleAxiosError } from './axios'
-import { ID } from './ID'
-
-/**
- * 默认状态
- */
-export function getDefaultState() {
-  return {
-    isBusy: false,
-    isError: false,
-    status: ViewState.idle,
-    isEmpty: undefined,
-    error: undefined,
-    lastRequestTime: undefined,
-    body: undefined,
-    originData: undefined,
-    data: undefined,
-    key: ID.generate()
-  }
-}
+} from '../model'
+import { Art } from '../art'
+import { clearCache, createCacheKey, getCache, setCache } from '../utils/cache'
+import { getAxiosRequest, handleAxiosError } from '../axios'
+import { CancelMapping } from '../utils/cancel-mapping'
+import { RequestMapping } from '../utils/request-mapping'
+import { ID } from '../utils/ID'
 
 /**
  * 处理默认请求体
@@ -46,7 +28,7 @@ export function getDefaultState() {
  * @param body 动态请求参数
  */
 export function updateDefaultBody<P>(
-  store: StoreType<any, P>,
+  store: FetchStoreType<any, P>,
   defaultBody?: DefaultBodyType<P>,
   body?: Partial<P>
 ) {
@@ -71,12 +53,12 @@ export function updateDefaultBody<P>(
  * @param pagination 是否使用分页
  */
 export function handlePageBody<R, P>(
-  store: StoreType<R, P>,
+  store: FetchStoreType<R, P>,
   pagination?: boolean
 ): any {
   let _body = store.body as any
   if (pagination) {
-    const _store = store as QueryStoreType<R, P>
+    const _store = store as FetchStoreType<R, P>
     if (Art.config.convertPage) {
       _body = {
         ...(_body ?? {}),
@@ -99,8 +81,8 @@ export function handlePageBody<R, P>(
  * @param postBody
  */
 export function getPostBody<P>(
-  body?: QueryBody<P>,
-  postBody?: (body: QueryBody<P>) => any
+  body?: FetchBody<P>,
+  postBody?: (body: FetchBody<P>) => any
 ) {
   let _body = body
   if (postBody && _body) {
@@ -123,12 +105,11 @@ export function autoClear(store: { clear: () => void }, autoClear?: boolean) {
 /**
  * 获取当前配置项目
  * @param config
- * @param type
  */
 export function getMyConfig<R, P>(
-  config?: QueryConfig<R, P>,
-  type: 'submit' | 'query' = 'query'
-): QueryConfig<R, P> {
+  config?: FetchConfig<R, P>
+): FetchConfig<R, P> {
+  const submit = config?.submit ?? false
   // 初始化默认配置
   const defaultConfig = {
     status: true,
@@ -136,13 +117,13 @@ export function getMyConfig<R, P>(
     isDefaultSet: true,
     autoClear: false,
     cacheTime: 300000,
+    submit,
     staleTime: 0,
     showMessage: true,
-    showSuccessMessage: type === 'submit',
+    showSuccessMessage: submit,
     showErrorMessage: true
-  } as QueryConfig<R, P>
+  } as Partial<FetchConfig<R, P>>
   // 得到当前配置
-  // @ts-ignore
   return { ...defaultConfig, ...(config ?? {}) }
 }
 
@@ -154,8 +135,12 @@ export function handleStartLoading(config: {
   loading?: boolean
   startLoading?: () => void
 }) {
-  if (config.loading && config.startLoading) {
-    config.startLoading()
+  if (config.loading) {
+    if (config.startLoading) {
+      config.startLoading()
+    } else if (Art.config.startLoading && RequestMapping.empty()) {
+      Art.config.startLoading()
+    }
   }
 }
 
@@ -165,21 +150,38 @@ export function handleStartLoading(config: {
  */
 export function handleEndLoading(config: {
   loading?: boolean
-  startLoading?: () => void
+  endLoading?: () => void
 }) {
-  if (config.loading && config.startLoading) {
-    config.startLoading()
+  if (config.loading) {
+    if (config.endLoading) {
+      config.endLoading()
+    } else if (Art.config.endLoading && RequestMapping.empty()) {
+      Art.config.endLoading()
+    }
   }
 }
 
+/**
+ * 发送请求接口
+ * @param request 请求对象
+ * @param store store
+ * @param config 配置项目
+ * @param setData 设置数据
+ */
 export async function doRequest<T, P>(
   request: RequestResult,
-  store: SubmitStoreType<T, P>,
-  config: QueryConfig<T, P>,
+  store: FetchStoreType<T, P>,
+  config: FetchConfig<T, P>,
   setData: (res: UseResult<T>) => void
 ): Promise<UseResult<T>> {
   // 处理开始loading
   handleStartLoading(config)
+
+  const key = `request_${ID.generate()}`
+
+  if (config.loading) {
+    RequestMapping.put(key, request.request)
+  }
 
   const setStatus = async (status: ViewState) => {
     const loadingWait = async () => {
@@ -196,6 +198,7 @@ export async function doRequest<T, P>(
 
   // 发送请求
   let myRes: UseResult<T>
+
   try {
     // 设置状态
     await setStatus(ViewState.busy)
@@ -227,6 +230,10 @@ export async function doRequest<T, P>(
     }
   }
 
+  if (config.loading) {
+    RequestMapping.del(key)
+  }
+
   setData(myRes)
 
   // 处理回调
@@ -242,7 +249,7 @@ export async function doRequest<T, P>(
 }
 
 // 处理消息
-function handleMessage<T, P>(config: QueryConfig<T, P>, res: UseResult) {
+function handleMessage<T, P>(config: FetchConfig<T, P>, res: UseResult) {
   if (config.showMessage) {
     if (
       res.success &&
@@ -261,7 +268,7 @@ function handleMessage<T, P>(config: QueryConfig<T, P>, res: UseResult) {
 }
 
 // 处理回调
-function handleCallback<T, P>(config: QueryConfig<T, P>, res: UseResult<T>) {
+function handleCallback<T, P>(config: FetchConfig<T, P>, res: UseResult<T>) {
   // 请求结束
   if (res.success) {
     if (config.onSuccess) {
@@ -370,47 +377,43 @@ export const waitTime = (time = 100) => {
   })
 }
 
-/**
- * 处理请求
- * @param request
- * @param config
- */
-export function doRun<R, P>(
-  request: (
-    body?: Partial<P>,
-    config?: QueryRunConfig
-  ) => Promise<UseResult<R>>,
-  config: QueryConfig<R, P>
-) {
-  if (config.throttleMs) {
-    return throttle(request, config.throttleMs)
-  }
-  return debounce(request, config.debounceMs)
-}
-
 // 防抖函数
 export function debounce<R, P>(
   request: (
     body?: Partial<P>,
-    config?: QueryRunConfig
+    config?: FetchRunConfig
   ) => Promise<UseResult<R>>,
+  cancelMapping: CancelMapping,
   ms?: number
 ) {
   let timeout: any
   return (
     body?: Partial<P>,
-    config?: QueryRunConfig
+    config?: FetchRunConfig
   ): Promise<UseResult<R>> => {
     clearTimeout(timeout)
-    return new Promise((resolve) => {
+
+    const key = `cancel_${ID.generate()}`
+    let _reject: any
+    const promise = new Promise((resolve, reject) => {
+      _reject = reject
       if (ms) {
-        timeout = setTimeout(() => {
-          resolve(request(body, config))
+        timeout = setTimeout(async () => {
+          const res = request(body, config)
+          resolve(res)
+          cancelMapping.delCancel(key)
         }, ms)
       } else {
-        resolve(request(body, config))
+        const res = request(body, config)
+        resolve(res)
+        cancelMapping.delCancel(key)
       }
     })
+    cancelMapping.putCancel(key, () => {
+      clearTimeout(timeout)
+      _reject({ message: 'cancel' })
+    })
+    return promise as Promise<UseResult<R>>
   }
 }
 
@@ -418,17 +421,20 @@ export function debounce<R, P>(
 export function throttle<R, P>(
   request: (
     body?: Partial<P>,
-    config?: QueryRunConfig
+    config?: FetchRunConfig
   ) => Promise<UseResult<R>>,
+  cancelMapping: CancelMapping,
   waitMs: number
 ) {
   let timeout: any
   let old = 0
   return (
     body?: Partial<P>,
-    config?: QueryRunConfig
+    config?: FetchRunConfig
   ): Promise<UseResult<R>> => {
-    return new Promise((resolve) => {
+    let _reject: any
+    const key = `cancel_${ID.generate()}`
+    const promise = new Promise((resolve) => {
       const now = new Date().valueOf()
       if (!old) {
         old = now
@@ -438,16 +444,27 @@ export function throttle<R, P>(
           clearTimeout(timeout)
           timeout = null
         }
-        resolve(request(body, config))
+        const res = request(body, config)
+        resolve(res)
+        cancelMapping.delCancel(key)
         old = now
       } else if (!timeout) {
         timeout = setTimeout(() => {
           old = new Date().valueOf()
           timeout = null
-          resolve(request(body, config))
+          const res = request(body, config)
+          resolve(res)
+          cancelMapping.delCancel(key)
         }, waitMs)
       }
     })
+
+    cancelMapping.putCancel(key, () => {
+      clearTimeout(timeout)
+      console.log('==cancel => throttle')
+      _reject({ message: 'cancel' })
+    })
+    return promise as Promise<UseResult<R>>
   }
 }
 
@@ -459,9 +476,9 @@ export function throttle<R, P>(
  * @param res
  */
 export function setStoreCacheData<R, P>(
-  config: QueryConfig<R, P>,
+  config: FetchConfig<R, P>,
   request: RequestType<P> | string,
-  store: StoreType<R, P>,
+  store: FetchStoreType<R, P>,
   res: UseResult<R>
 ) {
   if (!config.cache) {
@@ -473,7 +490,7 @@ export function setStoreCacheData<R, P>(
   let pagination: PaginationType | undefined
   try {
     if (config.pagination) {
-      const { current, pageSize, total, offset } = store as QueryStoreType<R, P>
+      const { current, pageSize, total, offset } = store as FetchStoreType<R, P>
       pagination = { current: current!, pageSize: pageSize!, total, offset }
     }
   } catch (e) {}
@@ -487,9 +504,9 @@ export function setStoreCacheData<R, P>(
 }
 
 export function getStoreCacheData<R, P>(
-  config: QueryConfig<R, P>,
+  config: FetchConfig<R, P>,
   request: RequestType<P> | string,
-  store: StoreType<R, P>
+  store: FetchStoreType<R, P>
 ) {
   if (!config.cache) {
     return { cache: undefined, active: false }
@@ -511,9 +528,9 @@ export function getStoreCacheData<R, P>(
 }
 
 export function getCacheRequest<R, P>(
-  config: QueryConfig<R, P>,
+  config: FetchConfig<R, P>,
   cache: CachedData<UseResult<R>, P>,
-  store: StoreType<R, P>
+  store: FetchStoreType<R, P>
 ): Promise<UseResult<R>> {
   const res = cache.data
   if (config.onSuccess) {
@@ -521,7 +538,7 @@ export function getCacheRequest<R, P>(
   }
   if (cache.pagination) {
     try {
-      const _store = store as QueryStoreType<R, P>
+      const _store = store as FetchStoreType<R, P>
       const { current, pageSize, total, offset } = cache.pagination
       _store.current = current
       _store.pageSize = pageSize
@@ -543,9 +560,9 @@ export function getCacheRequest<R, P>(
 }
 
 export function getCacheKey<R, P>(
-  config: QueryConfig<R, P>,
+  config: FetchConfig<R, P>,
   request: RequestType<P> | string,
-  store: StoreType<R, P>
+  store: FetchStoreType<R, P>
 ) {
   let key
 
@@ -566,49 +583,21 @@ export function getCacheKey<R, P>(
     key = createCacheKey(request as string)
   }
   if (config.pagination) {
-    const { current, pageSize } = store as QueryStoreType<R, P>
+    const { current, pageSize } = store as FetchStoreType<R, P>
     return `${key}_${current}_${pageSize}`
   }
   return key
 }
 
-export function setStatus(store: StoreType, status: ViewState) {
+export function setStatus(store: FetchStoreType, status: ViewState) {
   store.status = status
   store.isError = status === ViewState.error
   store.isBusy = status === ViewState.busy
 }
 
-export function setPage<R>(
-  config: {
-    current?: number
-    pageSize?: number
-    autoRun?: boolean
-  },
-  store: QueryStoreType<R>
-): void {
-  const { current, pageSize } = config ?? {}
-  if (current) {
-    store.current = current
-  }
-  if (pageSize) {
-    store.pageSize = pageSize
-  }
-}
-
-export function setPageRun<R>(
-  config: {
-    current?: number
-    pageSize?: number
-  },
-  store: QueryStoreType<R>
-): Promise<UseResult<R>> {
-  setPage(config, store)
-  return store.run()
-}
-
-export function refresh<R, P>(
-  myConfig: QueryConfig<R, P>,
-  store: StoreType<R>,
+export function doRefresh<R, P>(
+  myConfig: FetchConfig<R, P>,
+  store: FetchStoreType<R>,
   request: RequestType<P> | string,
   currentRequest: RequestResult | undefined,
   config?: RefreshConfigType
@@ -629,25 +618,13 @@ export function refresh<R, P>(
   }
 }
 
-export function cancel(
-  currentRequest: RequestResult | undefined,
-  message?: string
-) {
-  if (currentRequest) {
-    if (currentRequest.type === 'axios') {
-      // eslint-disable-next-line no-unused-expressions
-      currentRequest.source?.cancel(message)
-    }
-  }
-}
-
 export function getRequestFun<R, P>(
-  myConfig: QueryConfig<R, P>,
-  store: StoreType<R>,
+  myConfig: FetchConfig<R, P>,
+  store: FetchStoreType<R>,
   request: RequestType<P> | string,
   currentRequest: RequestResult | undefined,
   body?: Partial<P>,
-  config?: QueryRunConfig
+  config?: FetchRunConfig
 ): Promise<UseResult<R>> {
   myConfig = { ...myConfig, ...config }
   // 清除
@@ -679,15 +656,15 @@ export function getRequestFun<R, P>(
 // 设置返回数据
 function setResData<R, P>(
   res: UseResult<R>,
-  myConfig: QueryConfig<R, P>,
-  store: StoreType<R>,
+  myConfig: FetchConfig<R, P>,
+  store: FetchStoreType<R>,
   request: RequestType<P> | string
 ) {
   if (res.success) {
     if (myConfig.isDefaultSet) {
       store.setData(res.data)
       if (myConfig.pagination) {
-        ;(store as QueryStoreType).total = res.total ?? 0
+        ;(store as FetchStoreType).total = res.total ?? 0
       }
     }
     if (myConfig?.status && store?.status !== ViewState.error) {

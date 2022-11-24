@@ -1,4 +1,4 @@
-import { CachedData } from './model'
+import { CachedData } from '../model'
 
 const dataCache: Map<string, CachedData> = new Map()
 

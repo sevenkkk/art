@@ -1,6 +1,6 @@
 import React from 'react'
 import { ChangeEvent, useEffect } from 'react'
-import { useQuery, resso } from 'art'
+import { resso, useFetch } from 'art'
 
 export const store = resso({
   tabsList: ['popular', 'realTime', 'month'],
@@ -36,7 +36,7 @@ type LiveMode = {
   no: number
 }
 export const ListDiv = ({ type }: ListDivPros) => {
-  const store = useQuery<LiveMode[], { type: string }>(
+  const store = useFetch<LiveMode[], { type: string }>(
     '/app/live/streamer/ranking/list',
     {
       /*postData: (data: LiveMode[]) => (data.map((item, index) => ({...item, no: index}))),
@@ -46,7 +46,9 @@ export const ListDiv = ({ type }: ListDivPros) => {
 		},*/
       defaultBody: { type: type },
       // isDefaultSet: false,
-      usePage: true,
+      pagination: true,
+      loading: true,
+      // manual: true,
       // method: 'get',
       // loadingDelayMs: 3000,
       // debounceMs: 1000,
@@ -69,12 +71,9 @@ export const ListDiv = ({ type }: ListDivPros) => {
 
   const { data, isBusy, run } = store
 
-  console.log(data)
-
   useEffect(() => {
-    setTimeout(() => {
-      store.cancel()
-    }, 100)
+    // store.run().then((data) => console.log(data))
+    // store.cancel()
   }, [])
 
   const handleChange = (event: ChangeEvent) => {
