@@ -172,7 +172,7 @@ export type RequestMode = 'customize' | 'default' | 'axios'
 export type RequestResult = {
   type: RequestMode
   request: () => Promise<any>
-  source?: any
+  cancel?: () => void
 }
 
 export type FetchBody<P> = Partial<P> & { current?: number; pageSize?: number }

@@ -7,10 +7,10 @@ export function getAxiosRequest(
   body: any,
   customConfig?: any
 ) {
-  const source = Art.axios!.CancelToken.source()
-  const config = { cancelToken: source.token, ...(customConfig ?? {}) }
+  const source = Art.axios?.CancelToken.source()
+  const config = { cancelToken: source?.token, ...(customConfig ?? {}) }
   const request = () => _getAxiosRequest(method, url, body, config)
-  return { request, source }
+  return { request, cancel: () => source?.cancel() }
 }
 
 export function _getAxiosRequest(

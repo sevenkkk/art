@@ -328,15 +328,17 @@ function handleRequestCatch(e: any, mode: RequestMode): UseResult {
  * @param request 请求或者地址
  * @param body 请求阐述
  * @param method 方法
+ * @param fetchConfig 更多配置项目
  */
 export function getRequest(
   request: RequestType | string,
   body?: any,
-  method?: Method
+  method?: Method,
+  fetchConfig?: any
 ): RequestResult {
   let _request: () => Promise<any>
 
-  let _source: any
+  let _cancel: (() => void) | undefined
   let type: RequestMode = 'default'
 
   if (typeof request === 'function') {
@@ -356,26 +358,29 @@ export function getRequest(
 
     if (Art.config.axios) {
       type = 'axios'
-      const { request, source } = getAxiosRequest(
+      const { request, cancel } = getAxiosRequest(
         _method,
         url,
-        body ?? (isPost ? {} : undefined)
+        body ?? (isPost ? {} : undefined),
+        fetchConfig
       )
       _request = request
-      _source = source
+      _cancel = cancel
     } else {
-      const { request } = getFetchRequest(
+      const { request, cancel } = getFetchRequest(
         _method,
         url,
-        body ?? (isPost ? {} : undefined)
+        body ?? (isPost ? {} : undefined),
+        fetchConfig
       )
       _request = request
+      _cancel = cancel
     }
   }
   return {
     request: _request,
     type,
-    source: _source
+    cancel: _cancel
   }
 }
 

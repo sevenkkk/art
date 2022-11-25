@@ -68,6 +68,9 @@ export function FetchPlugin<TData, TBody>(
   }
 
   const cancel = (store: FetchStoreType) => {
+    if (currentRequest?.cancel) {
+      currentRequest?.cancel!()
+    }
     cancelMapping.cancelAll()
     store.setStatus(ViewState.idle)
   }

@@ -7,8 +7,10 @@ export function getFetchRequest(
   body: any,
   customConfig?: any
 ) {
-  const request = () => _getFetchRequest(method, url, body, customConfig)
-  return { request }
+  const controller = new AbortController()
+  const config = { signal: controller.signal, ...(customConfig ?? {}) }
+  const request = () => _getFetchRequest(method, url, body, config)
+  return { request, cancel: () => controller.abort() }
 }
 
 export function _getFetchRequest(
