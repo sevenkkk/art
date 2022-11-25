@@ -63,7 +63,7 @@ export type BaseConfig<R = unknown, P = unknown> = {
   onSuccess?: (data: R, res: UseResult<R>, cache: boolean) => void
   onError?: (res: UseResult<R>) => void // 失败回调
   onComplete?: (res: UseResult<R>) => void // 完成回调
-  convertRes?: (res: any) => UseResult<R> // 请求响应体转换
+  convertRes?: (res: any) => Promise<UseResult<R>> // 请求响应体转换
   postData?: (data: any) => R // data转换
   loadingDelayMs?: number // 延迟loading时间
   debounceMs?: number // 防抖时间
@@ -167,8 +167,10 @@ export type CachedData<TData = unknown, TBody = unknown> = {
   time: number
 }
 
+export type RequestMode = 'customize' | 'default' | 'axios'
+
 export type RequestResult = {
-  type: 'axios'
+  type: RequestMode
   request: () => Promise<any>
   source?: any
 }

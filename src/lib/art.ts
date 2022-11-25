@@ -1,6 +1,8 @@
 import { UseResult } from './model'
-import { AxiosInstance, AxiosStatic } from './axios/axios'
+import { AxiosInstance, AxiosStatic } from './fetch/axios/axios'
 import resso from './obs/resso'
+
+export type ResultType = UseResult | Promise<UseResult>
 
 export interface TemplateConfigOptions {
   baseURL?: string
@@ -14,7 +16,7 @@ export interface TemplateConfigOptions {
   showSuccessMessage?: (res: UseResult) => void
   startLoading?: () => void
   endLoading?: () => void
-  convertRes?: (res: any) => UseResult
+  convertRes?: (res: any) => ResultType
   convertError?: (resError: any, defaultResult: UseResult) => UseResult
   convertPage?: (current: number, pageSize: number) => any
   handleHttpError?: <T>(resError: T) => void
@@ -37,15 +39,8 @@ export class Art {
     convertPage: (page, pageSize) => {
       return { page, pageSize }
     },
-    convertRes: (resBody: any): UseResult<any> => {
-      const { success, errorCode, errorMessage, payload, count } = resBody || {}
-      return {
-        success,
-        code: errorCode,
-        message: errorMessage,
-        data: payload,
-        total: count
-      }
+    convertRes: async (res: Response): Promise<UseResult> => {
+      return { success: res.ok, data: await res.json() }
     }
   }
 

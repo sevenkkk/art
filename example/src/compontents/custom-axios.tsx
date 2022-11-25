@@ -1,6 +1,8 @@
 import React from 'react'
 import { ChangeEvent, useEffect } from 'react'
 import { resso, useFetch } from 'art'
+import '../fetch-axios-setup'
+import axios from 'axios'
 
 export const store = resso({
   tabsList: ['popular', 'realTime', 'month'],
@@ -8,7 +10,7 @@ export const store = resso({
   count: 0
 })
 
-export const Tabs = () => {
+export const CustomAxios = () => {
   const { tabsList, index, count } = store
 
   return (
@@ -35,9 +37,16 @@ type LiveMode = {
   nickname: string
   no: number
 }
+
+const query = (body: { type: string }) => {
+  return axios('https://api-t.bagel7777.com/app/live/streamer/ranking/list', {
+    method: 'POST',
+    data: body
+  })
+}
 export const ListDiv = ({ type }: ListDivPros) => {
   const store = useFetch<LiveMode[], { type: string }>(
-    '/app/live/streamer/ranking/list',
+    (body) => query(body),
     {
       /*postData: (data: LiveMode[]) => (data.map((item, index) => ({...item, no: index}))),
 		convertRes: (res) => {
@@ -56,7 +65,7 @@ export const ListDiv = ({ type }: ListDivPros) => {
       // pollingIntervalMs: 1000,
       // refreshOnWindowFocus: true,
       // refreshOnWindowFocusTimespanMs: 5000,
-      cache: () => [type],
+      // cache: () => [type],
       onSuccess: () => {
         console.log(store)
       }

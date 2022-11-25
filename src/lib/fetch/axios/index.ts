@@ -1,10 +1,15 @@
-import { Art } from '../art'
+import { Art } from '../../art'
 import { AxiosError, AxiosRequestConfig, Method } from './axios'
 
-export function getAxiosRequest(method: Method, url: string, body: any) {
+export function getAxiosRequest(
+  method: Method,
+  url: string,
+  body: any,
+  customConfig?: any
+) {
   const source = Art.axios!.CancelToken.source()
-  const request = () =>
-    _getAxiosRequest(method, url, body, { cancelToken: source.token })
+  const config = { cancelToken: source.token, ...(customConfig ?? {}) }
+  const request = () => _getAxiosRequest(method, url, body, config)
   return { request, source }
 }
 

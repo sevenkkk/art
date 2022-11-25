@@ -1,3 +1,4 @@
+import 'whatwg-fetch'
 import { Art } from './lib/art'
 import { makeFetch, useFetch } from './lib/fetch'
 import { useAutoRun } from './lib/hooks'

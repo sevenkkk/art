@@ -9,6 +9,7 @@ import {
   Method,
   PaginationType,
   RefreshConfigType,
+  RequestMode,
   RequestResult,
   RequestType,
   UseResult,
@@ -16,10 +17,11 @@ import {
 } from '../model'
 import { Art } from '../art'
 import { clearCache, createCacheKey, getCache, setCache } from '../utils/cache'
-import { getAxiosRequest, handleAxiosError } from '../axios'
+import { getAxiosRequest, handleAxiosError } from '../fetch/axios'
 import { CancelMapping } from '../utils/cancel-mapping'
 import { RequestMapping } from '../utils/request-mapping'
 import { ID } from '../utils/ID'
+import { getFetchRequest } from '../fetch/default'
 
 /**
  * 处理默认请求体
@@ -161,6 +163,9 @@ export function handleEndLoading(config: {
   }
 }
 
+function isPromiseLike<T>(it: unknown): it is PromiseLike<T> {
+  return it instanceof Promise || typeof (it as any)?.then === 'function'
+}
 /**
  * 发送请求接口
  * @param request 请求对象
@@ -202,25 +207,39 @@ export async function doRequest<T, P>(
   try {
     // 设置状态
     await setStatus(ViewState.busy)
+
     // 请求接口
     const res = await request.request()
+
+    const convertRes = config.convertRes ?? Art.config.convertRes
+
     // 转换数据
-    myRes = config.convertRes
-      ? config.convertRes(res)
-      : Art.config.convertRes
-      ? Art.config.convertRes(res)
-      : res
-    // 设置原始值
-    store.originData = myRes.data
-    // 转换成前端想要的数据格式
-    if (config.postData) {
-      myRes.data = config.postData(myRes.data)
+    if (convertRes) {
+      const result = convertRes(res)
+      if (isPromiseLike(result)) {
+        myRes = (await result) as UseResult<T>
+        console.log(myRes)
+      } else {
+        myRes = result as UseResult<T>
+      }
+    } else {
+      myRes = res
     }
+
+    if (myRes.success) {
+      // 设置原始值
+      store.originData = myRes.data
+      // 转换成前端想要的数据格式
+      if (config.postData) {
+        myRes.data = config.postData(myRes.data)
+      }
+    }
+
     // 设置状态
-    await setStatus(ViewState.idle)
+    await setStatus(myRes.success ? ViewState.idle : ViewState.error)
   } catch (e) {
     // 处理异常
-    myRes = handleRequestCatch(e, request) as UseResult<T>
+    myRes = handleRequestCatch(e, request.type) as UseResult<T>
     if (!myRes.isCancel) {
       // 设置状态
       await setStatus(ViewState.error)
@@ -287,12 +306,14 @@ function handleCallback<T, P>(config: FetchConfig<T, P>, res: UseResult<T>) {
 /**
  * 处理请求失败
  * @param e
- * @param request
+ * @param mode 请求模式
  */
-function handleRequestCatch(e: any, request: RequestResult): UseResult {
-  let result = { success: false, isCancel: false, message: e } as UseResult
-  if (request.type === 'axios') {
+function handleRequestCatch(e: any, mode: RequestMode): UseResult {
+  let result
+  if (mode === 'axios') {
     result = handleAxiosError(e)
+  } else {
+    throw new Error(e)
   }
 
   if (Art.config.handleHttpError) {
@@ -316,8 +337,10 @@ export function getRequest(
   let _request: () => Promise<any>
 
   let _source: any
+  let type: RequestMode = 'default'
 
   if (typeof request === 'function') {
+    type = 'customize'
     _request = () => request(body)
   } else {
     let url = request as string
@@ -332,6 +355,7 @@ export function getRequest(
     }
 
     if (Art.config.axios) {
+      type = 'axios'
       const { request, source } = getAxiosRequest(
         _method,
         url,
@@ -340,14 +364,17 @@ export function getRequest(
       _request = request
       _source = source
     } else {
-      throw new Error(
-        '[art] Please pass in a custom request plugin, currently only supports axios'
+      const { request } = getFetchRequest(
+        _method,
+        url,
+        body ?? (isPost ? {} : undefined)
       )
+      _request = request
     }
   }
   return {
     request: _request,
-    type: 'axios',
+    type,
     source: _source
   }
 }
