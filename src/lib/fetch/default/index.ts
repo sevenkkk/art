@@ -29,3 +29,16 @@ export function _getFetchRequest(
     body: JSON.stringify(body)
   })
 }
+
+export function handleFetchError(e: any) {
+  if (
+    typeof e === 'object' &&
+    e instanceof DOMException &&
+    e.message.includes('The user aborted a request')
+  ) {
+    return { success: false, isCancel: true, message: e.message }
+  } else {
+    console.log(e)
+    throw new Error(e)
+  }
+}

@@ -21,7 +21,7 @@ import { getAxiosRequest, handleAxiosError } from '../fetch/axios'
 import { CancelMapping } from '../utils/cancel-mapping'
 import { RequestMapping } from '../utils/request-mapping'
 import { ID } from '../utils/ID'
-import { getFetchRequest } from '../fetch/default'
+import { getFetchRequest, handleFetchError } from '../fetch/default'
 
 /**
  * 处理默认请求体
@@ -218,7 +218,6 @@ export async function doRequest<T, P>(
       const result = convertRes(res)
       if (isPromiseLike(result)) {
         myRes = (await result) as UseResult<T>
-        console.log(myRes)
       } else {
         myRes = result as UseResult<T>
       }
@@ -313,7 +312,7 @@ function handleRequestCatch(e: any, mode: RequestMode): UseResult {
   if (mode === 'axios') {
     result = handleAxiosError(e)
   } else {
-    throw new Error(e)
+    result = handleFetchError(e)
   }
 
   if (Art.config.handleHttpError) {
@@ -650,43 +649,8 @@ export function doRefresh<R, P>(
   }
 }
 
-export function getRequestFun<R, P>(
-  myConfig: FetchConfig<R, P>,
-  store: FetchStoreType<R>,
-  request: RequestType<P> | string,
-  currentRequest: RequestResult | undefined,
-  body?: Partial<P>,
-  config?: FetchRunConfig
-): Promise<UseResult<R>> {
-  myConfig = { ...myConfig, ...config }
-  // 清除
-  autoClear(store, myConfig.autoClear)
-
-  // 获取缓存
-  const { cache, active } = getStoreCacheData<R, P>(myConfig, request, store)
-
-  // 如果有缓存 并且缓存有效
-  if (!config?.refresh && cache && active) {
-    return getCacheRequest<R, P>(myConfig, cache, store)
-  } else {
-    // 设置body
-    updateDefaultBody<P>(store, myConfig.defaultBody, body)
-    // 处理分页
-    let _body = handlePageBody(store, myConfig.pagination)
-    // 获取准备提交的请求体
-    _body = getPostBody(_body, myConfig.postBody)
-    // 获取请求体
-    currentRequest = getRequest(request, _body, myConfig.method)
-
-    // 发送请求
-    return doRequest<R, P>(currentRequest, store, myConfig, (res) =>
-      setResData(res, myConfig, store, request)
-    )
-  }
-}
-
 // 设置返回数据
-function setResData<R, P>(
+export function setResData<R, P>(
   res: UseResult<R>,
   myConfig: FetchConfig<R, P>,
   store: FetchStoreType<R>,

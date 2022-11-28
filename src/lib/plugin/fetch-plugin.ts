@@ -9,7 +9,20 @@ import {
   ViewState
 } from '../model'
 import { CancelMapping } from '../utils/cancel-mapping'
-import { debounce, doRefresh, getRequestFun, throttle } from './fetch-service'
+import {
+  autoClear,
+  debounce,
+  doRefresh,
+  doRequest,
+  getCacheRequest,
+  getPostBody,
+  getRequest,
+  getStoreCacheData,
+  handlePageBody,
+  setResData,
+  throttle,
+  updateDefaultBody
+} from './fetch-service'
 import { PluginReturn } from '../utils/plugin-utils'
 
 export function FetchPlugin<TData, TBody>(
@@ -46,12 +59,41 @@ export function FetchPlugin<TData, TBody>(
    * @param runConfig 配置项
    */
   const run = (
-    store: FetchStoreType,
+    store: FetchStoreType<TData, TBody>,
     body?: Partial<TBody>,
     runConfig?: FetchRunConfig
   ) => {
-    const requestFun = (body?: Partial<TBody>, runConfig?: FetchRunConfig) =>
-      getRequestFun(config, store, request, currentRequest, body, runConfig)
+    const requestFun = (body?: Partial<TBody>, runConfig?: FetchRunConfig) => {
+      const myConfig = { ...config, ...runConfig }
+      // 清除
+      autoClear(store, myConfig.autoClear)
+
+      // 获取缓存
+      const { cache, active } = getStoreCacheData<TData, TBody>(
+        myConfig,
+        request,
+        store
+      )
+
+      // 如果有缓存 并且缓存有效
+      if (!config?.refresh && cache && active) {
+        return getCacheRequest<TData, TBody>(myConfig, cache, store)
+      } else {
+        // 设置body
+        updateDefaultBody<TBody>(store, myConfig.defaultBody, body)
+        // 处理分页
+        let _body = handlePageBody(store, myConfig.pagination)
+        // 获取准备提交的请求体
+        _body = getPostBody(_body, myConfig.postBody)
+        // 获取请求体
+        currentRequest = getRequest(request, _body, myConfig.method)
+
+        // 发送请求
+        return doRequest<TData, TBody>(currentRequest, store, myConfig, (res) =>
+          setResData(res, myConfig, store, request)
+        )
+      }
+    }
     if (config.throttleMs) {
       return throttle(
         requestFun,
@@ -68,6 +110,7 @@ export function FetchPlugin<TData, TBody>(
   }
 
   const cancel = (store: FetchStoreType) => {
+    console.log(currentRequest)
     if (currentRequest?.cancel) {
       currentRequest?.cancel!()
     }

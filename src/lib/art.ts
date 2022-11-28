@@ -40,7 +40,8 @@ export class Art {
       return { page, pageSize }
     },
     convertRes: async (res: Response): Promise<UseResult> => {
-      return { success: res.ok, data: await res.json() }
+      const { data, count } = await res.json()
+      return { success: res.ok, data, total: count }
     }
   }
 
