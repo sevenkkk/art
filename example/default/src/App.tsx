@@ -30,12 +30,17 @@ type ListDivPros = {
   type: string
 }
 
-type LiveMode = {
-  streamID: string
-  userName: string
-  nickname: string
-  no: number
+
+type TestModel = {
+  accId: string
+  goodsImg: GoodsImgModel[]
 }
+
+type GoodsImgModel = {
+  id: string
+  fileName: string
+}
+
 
 /*const query = (body: { type: string }) => {
   return fetch('https://api-t.bagel7777.com/app/live/streamer/ranking/list', {
@@ -48,15 +53,18 @@ type LiveMode = {
   })
 }*/
 export const ListDiv = ({ type }: ListDivPros) => {
-  const store = useFetch<LiveMode[], { type: string }>(
-    "/app/live/streamer/ranking/list",
+  const store = useFetch<TestModel>(
+    "/duxing/api/chaoyu_index_queryGoodsDetails_v1",
     {
-      defaultBody: { type: type },
+      defaultBody: {
+        "goodsId": "143610019661802561",
+        "language": "chineseZh"
+      },
       pagination: true,
       onSuccess: () => {
         console.log(store);
       },
-      initialData: () => {
+      /*initialData: () => {
         return [
           {
             streamID: "test001",
@@ -73,7 +81,7 @@ export const ListDiv = ({ type }: ListDivPros) => {
           no: 1,
           nickname: type
         }
-      ]
+      ]*/
     },
     [type]
   );
@@ -91,10 +99,9 @@ export const ListDiv = ({ type }: ListDivPros) => {
   return (
     <>
       {isLoading && <div>loading</div>}
-      {data?.map((item, index) => (
-        <div key={index}>
-          <span>{item.no}:</span>
-          <span>{item.userName}</span>
+      {data?.goodsImg?.map((item) => (
+        <div key={item.id}>
+          <span>{item.fileName}:</span>
           {/*<button onClick={() => store.setIndex(i)}>设置当前active{i}</button>*/}
         </div>
       ))}

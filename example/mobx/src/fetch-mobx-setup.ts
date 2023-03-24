@@ -1,18 +1,22 @@
 import { Art, UseResult } from 'art'
-import { makeAutoObservable } from 'mobx'
+import { configure, makeAutoObservable } from "mobx";
+
+configure({
+  enforceActions: "never",
+})
 
 Art.setup({
-  baseURL: 'https://api-t.bagel7777.com',
+  baseURL: 'https://api.ez-sourcing.com/',
   observable: makeAutoObservable,
   convertPage: (current, pageSize) => {
     return { page: current, pageSize }
   },
   convertRes: async (res: Response): Promise<UseResult> => {
-    const { errorCode, errorMessage, payload, count } = (await res.json()) || {}
+    const { code, errorMessage, data, count } = (await res.json()) || {}
     return {
       success: res.ok,
-      data: payload,
-      code: errorCode,
+      data: data,
+      code: code,
       message: errorMessage,
       total: count
     }
