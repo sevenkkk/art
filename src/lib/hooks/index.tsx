@@ -10,7 +10,7 @@ export function useCommonHooks(
   useEffect(() => {
     const manual = config?.manual ?? config?.submit ?? false
     if (!manual) {
-      store.run().then()
+      store.run()
     }
     let interval: any
     if (config?.pollingIntervalMs) {
@@ -18,8 +18,8 @@ export function useCommonHooks(
         clearInterval(interval)
       }
       interval = setInterval(() => {
-        store.run().then()
-      }, config?.pollingIntervalMs)
+        store.run()
+      }, config.pollingIntervalMs)
     }
     return () => {
       if (interval) {
@@ -39,9 +39,9 @@ export function useCommonHooks(
           (config?.refreshOnWindowFocusTimespanMs ?? 0)
       )
         if (config?.refreshOnWindowFocusMode === 'run') {
-          store.run().then()
+          store.run()
         } else {
-          store.refresh().then()
+          store.refresh()
         }
     }
   }, [visibilityChange])
@@ -53,6 +53,6 @@ export function useAutoRun<T>(
   deps?: DependencyList
 ) {
   useEffect(() => {
-    store.run(body).then()
+    store.run(body)
   }, deps ?? [])
 }

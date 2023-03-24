@@ -1,4 +1,4 @@
-import { FetchStoreType, ViewState } from '../model'
+import { FetchStatus, FetchStoreType } from '../model'
 import { PluginReturn } from '../utils/plugin-utils'
 import { ID } from '../utils/ID'
 
@@ -6,18 +6,20 @@ export function StatusPlugin<TData, TBody>(): PluginReturn<TData, TBody> {
   // 初始化状态
   const state = {
     key: ID.generate(),
-    isBusy: false,
+    status: 'idle',
+    isLoading: false,
     isError: false,
-    status: ViewState.idle,
-    isEmpty: undefined,
+    isSuccess: false,
+    isEmpty: false,
     error: undefined
   }
 
   // 设置状态
-  const setStatus = (store: FetchStoreType, status: ViewState) => {
+  const setStatus = (store: FetchStoreType, status: FetchStatus) => {
     store.status = status
-    store.isError = status === ViewState.error
-    store.isBusy = status === ViewState.busy
+    store.isLoading = status === 'loading'
+    store.isError = status === 'error'
+    store.isSuccess = status === 'success'
   }
 
   return {

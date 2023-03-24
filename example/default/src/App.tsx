@@ -1,16 +1,16 @@
-import React from 'react'
-import { ChangeEvent, useEffect } from 'react'
-import { resso, useFetch } from 'art'
-import './fetch-setup'
+import React from "react";
+import { ChangeEvent } from "react";
+import { resso, useFetch } from "art";
+import "./fetch-setup";
 
 export const store = resso({
-  tabsList: ['popular', 'realTime', 'month'],
+  tabsList: ["popular", "realTime", "month"],
   index: 0,
   count: 0
-})
+});
 
 const App = () => {
-  const { tabsList, index, count } = store
+  const { tabsList, index, count } = store;
 
   return (
     <div>
@@ -23,8 +23,8 @@ const App = () => {
       <button onClick={() => store.count++}>点击count+1 {count}</button>
       <ListDiv type={tabsList[index]} />
     </div>
-  )
-}
+  );
+};
 
 type ListDivPros = {
   type: string
@@ -49,32 +49,48 @@ type LiveMode = {
 }*/
 export const ListDiv = ({ type }: ListDivPros) => {
   const store = useFetch<LiveMode[], { type: string }>(
-    '/app/live/streamer/ranking/list',
+    "/app/live/streamer/ranking/list",
     {
       defaultBody: { type: type },
       pagination: true,
-      loading: true,
       onSuccess: () => {
-        console.log(store)
-      }
+        console.log(store);
+      },
+      initialData: () => {
+        return [
+          {
+            streamID: "test001",
+            userName: "test001",
+            no: 1,
+            nickname: type
+          }
+        ];
+      },
+      placeholderData: [
+        {
+          streamID: "placeholderData",
+          userName: "placeholderData",
+          no: 1,
+          nickname: type
+        }
+      ]
     },
     [type]
-  )
+  );
 
-  const { data, isBusy, run } = store
+  const { data, isLoading, run } = store;
 
-  useEffect(() => {
-    // store.cancel()
-  }, [store])
+  console.log('12321321');
 
   const handleChange = (event: ChangeEvent) => {
     // @ts-ignore
-    run({ type: event.target.value }).then()
-  }
+    const type = event.target.value;
+    run({ type });
+  };
 
   return (
     <>
-      {isBusy && <div>loading</div>}
+      {isLoading && <div>loading</div>}
       {data?.map((item, index) => (
         <div key={index}>
           <span>{item.no}:</span>
@@ -83,14 +99,15 @@ export const ListDiv = ({ type }: ListDivPros) => {
         </div>
       ))}
 
-      <button onClick={() => store.refresh()}>点击刷新</button>
+      <button onClick={() => store.refresh({ status: false })}>点击刷新</button>
+      <button onClick={() => store.cancel()}>点击取消请求</button>
       <input onChange={handleChange} />
 
       <button onClick={() => store.setPageRun({ current: 2 })}>
         点击获取第二页
       </button>
     </>
-  )
-}
+  );
+};
 
-export default App
+export default App;

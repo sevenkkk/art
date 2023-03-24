@@ -5,10 +5,8 @@ import {
   RefreshConfigType,
   RequestResult,
   RequestType,
-  UseResult,
-  ViewState
+  UseResult
 } from '../model'
-import { CancelMapping } from '../utils/cancel-mapping'
 import {
   autoClear,
   debounce,
@@ -32,14 +30,31 @@ export function FetchPlugin<TData, TBody>(
   // 当前请求
   let currentRequest: RequestResult | undefined
 
-  const cancelMapping = new CancelMapping()
+  const abortController = new AbortController()
 
   // 初始化状态
   const state = {
     lastRequestTime: undefined
   }
 
+  /**
+   * 请求刷新
+   * @param store 全局状态
+   * @param refConfig 配置项
+   */
   const refresh = (
+    store: FetchStoreType<TData, TBody>,
+    refConfig?: RefreshConfigType
+  ) => {
+    refreshSync(store, refConfig).then()
+  }
+
+  /**
+   * 请求刷新异步
+   * @param store 全局状态
+   * @param refConfig 配置项
+   */
+  const refreshSync = (
     store: FetchStoreType<TData, TBody>,
     refConfig?: RefreshConfigType
   ): Promise<UseResult<TData>> => {
@@ -59,6 +74,20 @@ export function FetchPlugin<TData, TBody>(
    * @param runConfig 配置项
    */
   const run = (
+    store: FetchStoreType<TData, TBody>,
+    body?: Partial<TBody>,
+    runConfig?: FetchRunConfig
+  ) => {
+    runSync(store, body, runConfig).then()
+  }
+
+  /**
+   * 请求接口异步
+   * @param store 全局状态
+   * @param body 请求体
+   * @param runConfig 配置项
+   */
+  const runSync = (
     store: FetchStoreType<TData, TBody>,
     body?: Partial<TBody>,
     runConfig?: FetchRunConfig
@@ -97,35 +126,34 @@ export function FetchPlugin<TData, TBody>(
     if (config.throttleMs) {
       return throttle(
         requestFun,
-        cancelMapping,
+        abortController,
         config.throttleMs
       )(body, runConfig)
     }
 
     return debounce(
       requestFun,
-      cancelMapping,
+      abortController,
       config.debounceMs
     )(body, runConfig)
   }
 
   const cancel = (store: FetchStoreType) => {
-    console.log(currentRequest)
     if (currentRequest?.cancel) {
       currentRequest?.cancel!()
     }
-    cancelMapping.cancelAll()
-    store.setStatus(ViewState.idle)
+    abortController.abort()
+    store.setStatus('idle')
   }
 
   const clear = (store: FetchStoreType) => {
     store.data = undefined
     store.body = undefined
-    store.isEmpty = undefined
+    store.isEmpty = false
   }
 
   return {
     state,
-    method: { run, refresh, cancel, clear }
+    method: { run, runSync, refresh, refreshSync, cancel, clear }
   }
 }

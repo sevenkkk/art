@@ -13,15 +13,15 @@ import {
   RequestResult,
   RequestType,
   UseResult,
-  ViewState
+  FetchStatus
 } from '../model'
 import { Art } from '../art'
 import { clearCache, createCacheKey, getCache, setCache } from '../utils/cache'
 import { getAxiosRequest, handleAxiosError } from '../fetch/axios'
-import { CancelMapping } from '../utils/cancel-mapping'
 import { RequestMapping } from '../utils/request-mapping'
 import { ID } from '../utils/ID'
 import { getFetchRequest, handleFetchError } from '../fetch/default'
+import { CancelablePromise } from '../utils/cancelable-promise'
 
 /**
  * 处理默认请求体
@@ -188,9 +188,9 @@ export async function doRequest<T, P>(
     RequestMapping.put(key, request.request)
   }
 
-  const setStatus = async (status: ViewState) => {
+  const setStatus = async (status: FetchStatus) => {
     const loadingWait = async () => {
-      if (status !== ViewState.busy && config.loadingDelayMs) {
+      if (status !== 'loading' && config.loadingDelayMs) {
         await waitTime(config.loadingDelayMs)
       }
     }
@@ -206,7 +206,7 @@ export async function doRequest<T, P>(
 
   try {
     // 设置状态
-    await setStatus(ViewState.busy)
+    await setStatus('loading')
 
     // 请求接口
     const res = await request.request()
@@ -235,16 +235,16 @@ export async function doRequest<T, P>(
     }
 
     // 设置状态
-    await setStatus(myRes.success ? ViewState.idle : ViewState.error)
+    await setStatus(myRes.success ? 'success' : 'error')
   } catch (e) {
     // 处理异常
     myRes = handleRequestCatch(e, request.type) as UseResult<T>
     if (!myRes.isCancel) {
       // 设置状态
-      await setStatus(ViewState.error)
+      await setStatus('error')
     } else {
       // 设置状态
-      await setStatus(ViewState.idle)
+      await setStatus('idle')
     }
   }
 
@@ -414,7 +414,7 @@ export function debounce<R, P>(
     body?: Partial<P>,
     config?: FetchRunConfig
   ) => Promise<UseResult<R>>,
-  cancelMapping: CancelMapping,
+  abortController: AbortController,
   ms?: number
 ) {
   let timeout: any
@@ -423,28 +423,16 @@ export function debounce<R, P>(
     config?: FetchRunConfig
   ): Promise<UseResult<R>> => {
     clearTimeout(timeout)
-
-    const key = `cancel_${ID.generate()}`
-    let _reject: any
-    const promise = new Promise((resolve, reject) => {
-      _reject = reject
+    return CancelablePromise<UseResult<R>>((resolve, reject) => {
       if (ms) {
         timeout = setTimeout(async () => {
           const res = request(body, config)
           resolve(res)
-          cancelMapping.delCancel(key)
         }, ms)
       } else {
-        const res = request(body, config)
-        resolve(res)
-        cancelMapping.delCancel(key)
+        request(body, config).then(resolve).catch(reject)
       }
-    })
-    cancelMapping.putCancel(key, () => {
-      clearTimeout(timeout)
-      _reject({ message: 'cancel' })
-    })
-    return promise as Promise<UseResult<R>>
+    }, abortController.signal)
   }
 }
 
@@ -454,7 +442,7 @@ export function throttle<R, P>(
     body?: Partial<P>,
     config?: FetchRunConfig
   ) => Promise<UseResult<R>>,
-  cancelMapping: CancelMapping,
+  abortController: AbortController,
   waitMs: number
 ) {
   let timeout: any
@@ -463,9 +451,7 @@ export function throttle<R, P>(
     body?: Partial<P>,
     config?: FetchRunConfig
   ): Promise<UseResult<R>> => {
-    let _reject: any
-    const key = `cancel_${ID.generate()}`
-    const promise = new Promise((resolve) => {
+    return CancelablePromise<UseResult<R>>((resolve, reject) => {
       const now = new Date().valueOf()
       if (!old) {
         old = now
@@ -475,27 +461,16 @@ export function throttle<R, P>(
           clearTimeout(timeout)
           timeout = null
         }
-        const res = request(body, config)
-        resolve(res)
-        cancelMapping.delCancel(key)
+        request(body, config).then(resolve).catch(reject)
         old = now
       } else if (!timeout) {
         timeout = setTimeout(() => {
           old = new Date().valueOf()
           timeout = null
-          const res = request(body, config)
-          resolve(res)
-          cancelMapping.delCancel(key)
+          request(body, config).then(resolve).catch(reject)
         }, waitMs)
       }
-    })
-
-    cancelMapping.putCancel(key, () => {
-      clearTimeout(timeout)
-      console.log('==cancel => throttle')
-      _reject({ message: 'cancel' })
-    })
-    return promise as Promise<UseResult<R>>
+    }, abortController.signal)
   }
 }
 
@@ -583,9 +558,7 @@ export function getCacheRequest<R, P>(
   // 控制新鲜度, 如果过期新鲜度
   const staleTime = config.staleTime ?? 0
   if (staleTime >= 0 && new Date().getTime() - cache.time > staleTime) {
-    store
-      .run(undefined, { loading: false, status: false, refresh: true })
-      .then()
+    store.run(undefined, { loading: false, status: false, refresh: true })
   }
   return new Promise((resolve) => resolve(res))
 }
@@ -620,12 +593,6 @@ export function getCacheKey<R, P>(
   return key
 }
 
-export function setStatus(store: FetchStoreType, status: ViewState) {
-  store.status = status
-  store.isError = status === ViewState.error
-  store.isBusy = status === ViewState.busy
-}
-
 export function doRefresh<R, P>(
   myConfig: FetchConfig<R, P>,
   store: FetchStoreType<R>,
@@ -641,7 +608,7 @@ export function doRefresh<R, P>(
     refresh: true
   }
   if (!currentRequest) {
-    return store.run(undefined, myConfig)
+    return store.runSync(undefined, myConfig)
   } else {
     return doRequest<R, P>(currentRequest, store, myConfig, (res) =>
       setResData(res, myConfig, store, request)
@@ -663,7 +630,7 @@ export function setResData<R, P>(
         ;(store as FetchStoreType).total = res.total ?? 0
       }
     }
-    if (myConfig?.status && store?.status !== ViewState.error) {
+    if (myConfig?.status && store?.status === 'success') {
       store.isEmpty =
         !res.data || (res.data && res.data instanceof Array && !res.data.length)
     }

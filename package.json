@@ -1,22 +1,23 @@
 {
-  "name": "art",
+  "name": "react-art",
   "version": "1.0.0",
   "description": "a request template",
   "author": "seven",
   "license": "MIT",
   "repository": "seven/art",
   "main": "dist/index.js",
-  "module": "dist/index.js",
+  "module": "dist/index.m.js",
   "source": "src/index.ts",
+  "typings": "dist/index.d.ts",
   "exports": {
     "require": "./dist/index.js",
-    "default": "./dist/index.js"
+    "default": "./dist/index.modern.mjs"
   },
   "engines": {
     "node": ">=10"
   },
   "scripts": {
-    "build": "microbundle --no-compress --format modern,cjs",
+    "build": "rm -rf dist/ && microbundle --jsx React.createElement -i src/index.ts -f modern,esm,cjs",
     "start": "microbundle watch --no-compress --format modern,cjs --jsx React.createElement",
     "prepare": "run-s build",
     "test": "run-s test:unit test:lint test:build",

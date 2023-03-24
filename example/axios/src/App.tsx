@@ -51,16 +51,17 @@ export const ListDiv = ({ type }: ListDivPros) => {
     [type]
   )
 
-  const { data, isBusy, run } = store
+  const { data, isLoading, run } = store
 
   const handleChange = (event: ChangeEvent) => {
     // @ts-ignore
-    run({ type: event.target.value }).then()
+    const type = event.target.value
+    run({ type })
   }
 
   return (
     <>
-      {isBusy && <div>loading</div>}
+      {isLoading && <div>loading</div>}
       {data?.map((item, index) => (
         <div key={index}>
           <span>{item.no}:</span>
@@ -69,7 +70,7 @@ export const ListDiv = ({ type }: ListDivPros) => {
         </div>
       ))}
 
-      <button onClick={() => store.refresh()}>点击刷新</button>
+      <button onClick={() => store.refresh({ status: true })}>点击刷新</button>
       <input onChange={handleChange} />
 
       <button onClick={() => store.setPageRun({ current: 2 })}>

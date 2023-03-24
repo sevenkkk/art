@@ -1,4 +1,4 @@
-import { UseResult } from './model'
+import { CachedData, UseResult } from './model'
 import { AxiosInstance, AxiosStatic } from './fetch/axios/axios'
 import resso from './obs/resso'
 
@@ -7,19 +7,25 @@ export type ResultType = UseResult | Promise<UseResult>
 export interface TemplateConfigOptions {
   baseURL?: string
   axios?: {
-    axios: AxiosStatic
-    instance?: AxiosInstance
-    instanceCallback?: (instance: AxiosInstance) => void
+    axios: AxiosStatic // axios 对象
+    instance?: AxiosInstance // axios 实例
+    instanceCallback?: (instance: AxiosInstance) => void // axios 创建实例回调
   }
-  observable?: any
-  showErrorMessage?: (res: UseResult) => void
-  showSuccessMessage?: (res: UseResult) => void
+  observable?: any // 监听者对象
+  showErrorMessage?: (res: UseResult) => void // 显示错误信息
+  showSuccessMessage?: (res: UseResult) => void // 显示成功消息
   startLoading?: () => void
   endLoading?: () => void
   convertRes?: (res: any) => ResultType
   convertError?: (resError: any, defaultResult: UseResult) => UseResult
   convertPage?: (current: number, pageSize: number) => any
   handleHttpError?: <T>(resError: T) => void
+  localCache?: boolean
+  setCacheData?: (key: string, data: CachedData) => void
+  clearCacheData?: (key: string) => void
+  getCacheData?: <TData, TBody>(
+    key: string
+  ) => CachedData<TData, TBody> | undefined
 }
 
 export class Art {
@@ -42,6 +48,17 @@ export class Art {
     convertRes: async (res: Response): Promise<UseResult> => {
       const { data, count } = await res.json()
       return { success: res.ok, data, total: count }
+    },
+    localCache: true,
+    setCacheData: (key: string, data: CachedData) => {
+      localStorage.setItem(key, JSON.stringify(data))
+    },
+    getCacheData: <TData, TBody>(key: string) => {
+      const data = localStorage.getItem(key)
+      if (data) {
+        return JSON.parse(data) as CachedData<TData, TBody>
+      }
+      return undefined
     }
   }
 

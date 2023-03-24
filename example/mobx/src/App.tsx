@@ -63,16 +63,17 @@ export const ListDiv = observer(({ type }: ListDivPros) => {
     [type]
   )
 
-  const { data, isBusy, run } = store
+  const { data, isLoading, run } = store
 
   const handleChange = (event: ChangeEvent) => {
     // @ts-ignore
-    run({ type: event.target.value }).then()
+    const type = event.target.value
+    run({ type })
   }
 
   return (
     <>
-      {isBusy && <div>loading</div>}
+      {isLoading && <div>loading</div>}
       {data?.map((item) => (
         <div key={item.no}>
           <span>{item.no}:</span>

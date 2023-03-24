@@ -31,7 +31,7 @@ export function makeFetch<
   const { state, method } = handlePlugins([
     StatusPlugin<TData, TBody>(),
     BodyPlugin<TData, TBody>(),
-    ResultPlugin<TData, TBody>(),
+    ResultPlugin<TData, TBody>(myConfig),
     FetchPlugin<TData, TBody>(request, myConfig),
     PagePlugin<TData, TBody>(myConfig)
   ])
@@ -46,6 +46,24 @@ export function makeFetch<
   return store
 }
 
+export function makeSubmit<
+  TBody = Record<string, any>,
+  TData = Record<string, any> | string
+>(
+  request: RequestType<TBody> | string,
+  config?: FetchConfig<TData, TBody>
+): FetchStoreType<TData, TBody> {
+  const _config: FetchConfig<TData, TBody> = {
+    submit: true,
+    showMessage: true,
+    showErrorMessage: true,
+    showSuccessMessage: true,
+    loading: true,
+    ...(config ?? {})
+  }
+  return makeFetch<TData, TBody>(request, _config)
+}
+
 export function useFetch<
   TData = Record<string, any> | string,
   TBody = Record<string, any>
@@ -56,5 +74,22 @@ export function useFetch<
 ) {
   const store = useMemo(() => makeFetch(request, config), deps ?? [])
   useCommonHooks(store, config, deps)
+  return store
+}
+
+export function useSubmit<
+  TBody = Record<string, any>,
+  TData = Record<string, any> | string
+>(
+  request: RequestType<TBody> | string,
+  config?: HooksFetchConfig<TData, TBody>,
+  deps?: DependencyList
+) {
+  const store = useMemo(() => makeSubmit(request, config), deps ?? [])
+  const _config: FetchConfig<TData, TBody> = {
+    submit: true,
+    ...(config ?? {})
+  }
+  useCommonHooks(store, _config, deps)
   return store
 }

@@ -49,16 +49,17 @@ export const ListDiv = ({ type }: ListDivPros) => {
     [type]
   )
 
-  const { data, isBusy, run } = useSnapshot(store)
+  const { data, isLoading, run } = useSnapshot(store)
 
   const handleChange = (event: ChangeEvent) => {
     // @ts-ignore
-    run({ type: event.target.value }).then()
+    const type = event.target.value
+    run({ type })
   }
 
   return (
     <>
-      {isBusy && <div>loading</div>}
+      {isLoading && <div>loading</div>}
       {data?.map((item, index) => (
         <div key={index}>
           <span>{item.no}:</span>

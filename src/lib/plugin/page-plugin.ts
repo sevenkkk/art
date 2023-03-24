@@ -37,9 +37,20 @@ export const PagePlugin = <TData, TBody>(
       current?: number
       pageSize?: number
     }
+  ): void => {
+    setPage(store, config)
+    store.run()
+  }
+
+  const setPageRunSync = (
+    store: FetchStoreType<TData>,
+    config: {
+      current?: number
+      pageSize?: number
+    }
   ): Promise<UseResult<TData>> => {
     setPage(store, config)
-    return store.run()
+    return store.runSync()
   }
 
   // 清理数据
@@ -53,6 +64,7 @@ export const PagePlugin = <TData, TBody>(
     method: {
       setPage,
       setPageRun,
+      setPageRunSync,
       clear
     }
   }
