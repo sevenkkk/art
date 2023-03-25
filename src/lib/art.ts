@@ -4,7 +4,7 @@ import resso from './obs/resso'
 
 export type ResultType = UseResult | Promise<UseResult>
 
-export interface TemplateConfigOptions {
+export interface ArtConfigOptions {
   baseURL?: string
   axios?: {
     axios: AxiosStatic // axios 对象
@@ -34,7 +34,7 @@ export class Art {
   static axios?: AxiosStatic
 
   // Default global configuration
-  static config: TemplateConfigOptions = {
+  static config: ArtConfigOptions = {
     observable: resso,
     showErrorMessage: (res) => {
       console.log(res)
@@ -66,7 +66,7 @@ export class Art {
    * Set global configuration
    * @param config
    */
-  static setup(config?: TemplateConfigOptions): void {
+  static setup(config?: ArtConfigOptions): void {
     if (config) {
       this.config = { ...this.config, ...config }
       if (this.config.axios) {
