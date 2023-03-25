@@ -74,13 +74,13 @@ export class Art {
         this.axios = axios
         if (instance) {
           this.axiosInstance = this.config.axios.instance
-          if (instanceCallback) {
-            instanceCallback(this.axiosInstance!)
-          }
         } else {
           this.axiosInstance = axios.create({
             baseURL: this.config.baseURL
           })
+        }
+        if (instanceCallback) {
+          instanceCallback(this.axiosInstance!)
         }
       }
     }
