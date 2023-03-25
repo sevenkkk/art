@@ -36,11 +36,6 @@ export function makeFetch<
     PagePlugin<TData, TBody>(myConfig)
   ])
 
-  console.log('======123')
-  console.log(request)
-  console.log(state)
-  // console.log(getMethodInjectStore(method, () => store))
-
   // 创建store
   const store: FetchStoreType<TData, TBody> = getObserver()<
     FetchStoreType<TData, TBody>

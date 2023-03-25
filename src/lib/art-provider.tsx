@@ -1,10 +1,10 @@
-import * as React from 'react'
+import React, { ReactNode } from 'react'
 import { Art, TemplateConfigOptions } from './art'
 
 let init = false
 
 type Props = {
-  children: React.ReactNode
+  children: ReactNode
   config?: TemplateConfigOptions
 }
 
@@ -14,5 +14,5 @@ export function ArtProvider({ children, config }: Props) {
     Art.setup(config)
   }
 
-  return <>{children}</>
+  return <div>{children}</div>
 }
