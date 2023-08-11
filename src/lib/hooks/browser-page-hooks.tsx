@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react'
-// @ts-ignore
-const document: any = window ? window.document : undefined
+const document: any =
+  typeof window !== 'undefined' ? window.document : undefined
 const visible = 'visible'
 
 /**
