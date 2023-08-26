@@ -4,6 +4,9 @@ import resso from './obs/resso'
 
 export type ResultType = UseResult | Promise<UseResult>
 
+const _localStorage: any =
+  typeof window !== 'undefined' ? localStorage : undefined
+
 export interface ArtConfigOptions {
   baseURL?: string
   axios?: {
@@ -17,12 +20,13 @@ export interface ArtConfigOptions {
   startLoading?: () => void
   endLoading?: () => void
   convertRes?: (res: any) => ResultType
-  convertError?: (resError: any, defaultResult: UseResult) => UseResult
+  convertError?: (res: any, defaultResult: UseResult) => Partial<UseResult>
   convertPage?: (current: number, pageSize: number) => any
-  handleHttpError?: <T>(resError: T) => void
+  handleHttpError?: (resError: any) => void
   localCache?: boolean
   setCacheData?: (key: string, data: CachedData) => void
   clearCacheData?: (key: string) => void
+  checkRetry?: <TData>(res: UseResult<TData>) => boolean
   getCacheData?: <TData, TBody>(
     key: string
   ) => CachedData<TData, TBody> | undefined
@@ -49,14 +53,26 @@ export class Art {
       const { data, count } = await res.json()
       return { success: res.ok, data, total: count }
     },
+    checkRetry: (res) => {
+      return !(res.status === 400 || res.status === 401 || res.status === 403)
+    },
     localCache: true,
     setCacheData: (key: string, data: CachedData) => {
-      localStorage.setItem(key, JSON.stringify(data))
+      if (_localStorage) {
+        localStorage.setItem(key, JSON.stringify(data))
+      }
+    },
+    clearCacheData: (key) => {
+      if (_localStorage) {
+        localStorage.removeItem(key)
+      }
     },
     getCacheData: <TData, TBody>(key: string) => {
-      const data = localStorage.getItem(key)
-      if (data) {
-        return JSON.parse(data) as CachedData<TData, TBody>
+      if (_localStorage) {
+        const data = localStorage.getItem(key)
+        if (data) {
+          return JSON.parse(data) as CachedData<TData, TBody>
+        }
       }
       return undefined
     }

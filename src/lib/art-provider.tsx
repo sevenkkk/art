@@ -1,12 +1,11 @@
-import React, { ReactNode } from 'react'
+import React, { PropsWithChildren } from 'react'
 import { Art, ArtConfigOptions } from './art'
 
 let init = false
 
-type Props = {
-  children: ReactNode
+type Props = PropsWithChildren<{
   config?: ArtConfigOptions
-}
+}>
 
 export function ArtProvider({ children, config }: Props) {
   if (!init) {

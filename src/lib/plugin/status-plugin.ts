@@ -2,7 +2,9 @@ import { FetchStatus, FetchStoreType } from '../model'
 import { PluginReturn } from '../utils/plugin-utils'
 import { ID } from '../utils/ID'
 
-export function StatusPlugin<TData, TBody>(): PluginReturn<TData, TBody> {
+export function StatusPlugin<TData, TBody>(): PluginReturn<
+  FetchStoreType<TData, TBody>
+> {
   // 初始化状态
   const state = {
     key: ID.generate(),

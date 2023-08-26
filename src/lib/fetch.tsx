@@ -1,95 +1,153 @@
 import { DependencyList, useMemo } from 'react'
-import { getMyConfig } from './plugin/fetch-service'
 import {
-  FetchConfig,
-  FetchStoreType,
-  HooksFetchConfig,
+  getMutationConfig,
+  getQueryConfig,
+  getQueryPageConfig
+} from './plugin/fetch-service'
+import {
+  HooksInfiniteConfig,
+  HooksMutationConfig,
+  HooksQueryConfig,
+  MutationStoreType,
+  QueryConfig,
+  QueryInfiniteConfig,
+  QueryInfiniteStoreType,
+  QueryPageConfig,
+  QueryPageStoreType,
+  QueryStoreType,
   RequestType
 } from './model'
-import { useCommonHooks } from './hooks'
-import { getObserver } from './obs/observer'
-import { PagePlugin } from './plugin/page-plugin'
-import { getMethodInjectStore, handlePlugins } from './utils/plugin-utils'
-import { FetchPlugin } from './plugin/fetch-plugin'
+import { getMyStore } from './utils/plugin-utils'
 import { StatusPlugin } from './plugin/status-plugin'
 import { BodyPlugin } from './plugin/body-plugin'
 import { ResultPlugin } from './plugin/result-plugin'
+import { QueryPlugin } from './plugin/query-plugin'
+import { MutationPlugin } from './plugin/mutation-plugin'
+import { MutationResultPlugin } from './plugin/mutation-result-plugin'
+import { useMutationHooks, useQueryHooks } from './hooks'
+import { PagePlugin } from './plugin/page-plugin'
+import { InfinitePlugin } from './plugin/infinite-plugin'
 
-export function makeFetch<
+export function makeQuery<
   TData = Record<string, any> | string,
   TBody = Record<string, any>
 >(
-  request: RequestType<TBody> | string,
-  config?: FetchConfig<TData, TBody>
-): FetchStoreType<TData, TBody> {
+  request: RequestType<TBody>,
+  config?: QueryConfig<TData, TBody>
+): QueryStoreType<TData, TBody> {
   // 得到当前配置
-  const myConfig = getMyConfig<TData, TBody>(config) as FetchConfig<
-    TData,
-    TBody
-  >
-
-  const { state, method } = handlePlugins([
+  const myConfig = getQueryConfig<TData, TBody>(config)
+  return getMyStore<QueryStoreType<TData, TBody>>([
     StatusPlugin<TData, TBody>(),
     BodyPlugin<TData, TBody>(),
-    ResultPlugin<TData, TBody>(myConfig),
-    FetchPlugin<TData, TBody>(request, myConfig),
-    PagePlugin<TData, TBody>(myConfig)
+    ResultPlugin<TData, TBody>(request, myConfig),
+    QueryPlugin<TData, TBody>(request, myConfig)
   ])
-
-  // 创建store
-  const store: FetchStoreType<TData, TBody> = getObserver()<
-    FetchStoreType<TData, TBody>
-  >({
-    ...state,
-    ...getMethodInjectStore(method, () => store)
-  })
-  return store
 }
 
-export function makeSubmit<
-  TBody = Record<string, any>,
-  TData = Record<string, any> | string
->(
-  request: RequestType<TBody> | string,
-  config?: FetchConfig<TData, TBody>
-): FetchStoreType<TData, TBody> {
-  const _config: FetchConfig<TData, TBody> = {
-    submit: true,
-    showMessage: true,
-    showErrorMessage: true,
-    showSuccessMessage: true,
-    loading: true,
-    ...(config ?? {})
-  }
-  return makeFetch<TData, TBody>(request, _config)
-}
-
-export function useFetch<
+export function makePagination<
   TData = Record<string, any> | string,
   TBody = Record<string, any>
 >(
-  request: RequestType<TBody> | string,
-  config?: HooksFetchConfig<TData, TBody>,
+  request: RequestType<TBody>,
+  config?: QueryPageConfig<TData, TBody>
+): QueryPageStoreType<TData, TBody> {
+  // 得到当前配置
+  const myConfig = getQueryPageConfig<TData, TBody>(config)
+  return getMyStore<QueryPageStoreType<TData, TBody>>([
+    StatusPlugin<TData, TBody>(),
+    BodyPlugin<TData, TBody>(),
+    ResultPlugin<TData, TBody>(request, myConfig),
+    QueryPlugin<TData, TBody>(request, myConfig),
+    PagePlugin<TData, TBody>(request, myConfig)
+  ])
+}
+
+export function makeInfinite<
+  TData = Record<string, any> | string,
+  TBody = Record<string, any>
+>(
+  request: RequestType<TBody>,
+  config?: QueryInfiniteConfig<TData, TBody>
+): QueryInfiniteStoreType<TData, TBody> {
+  // 得到当前配置
+  const myConfig = getQueryPageConfig<TData, TBody>(
+    config
+  ) as QueryInfiniteConfig<TData, TBody>
+  return getMyStore<QueryInfiniteStoreType<TData, TBody>>([
+    StatusPlugin<TData, TBody>(),
+    BodyPlugin<TData, TBody>(),
+    ResultPlugin<TData, TBody>(request, myConfig),
+    QueryPlugin<TData, TBody>(request, myConfig),
+    InfinitePlugin<TData, TBody>(request, myConfig)
+  ])
+}
+
+export function makeMutation<
+  TData = Record<string, any> | string,
+  TBody = Record<string, any>
+>(
+  request: RequestType<TBody>,
+  config?: QueryConfig<TData, TBody>
+): MutationStoreType<TData, TBody> {
+  // 得到当前配置
+  const myConfig = getMutationConfig<TData, TBody>(config)
+  return getMyStore<MutationStoreType<TData, TBody>>([
+    StatusPlugin<TData, TBody>(),
+    BodyPlugin<TData, TBody>(),
+    MutationResultPlugin<TData, TBody>(),
+    MutationPlugin<TData, TBody>(request, myConfig)
+  ])
+}
+
+export function useQuery<
+  TData = Record<string, any> | string,
+  TBody = Record<string, any>
+>(
+  request: RequestType<TBody>,
+  config?: HooksQueryConfig<TData, TBody>,
   deps?: DependencyList
-) {
-  const store = useMemo(() => makeFetch(request, config), deps ?? [])
-  useCommonHooks(store, config, deps)
+): QueryStoreType<TData, TBody> {
+  const store = useMemo(() => makeQuery(request, config), deps ?? [])
+  useQueryHooks(store, config, deps)
   return store
 }
 
-export function useSubmit<
+export function usePagination<
+  TData = Record<string, any> | string,
+  TBody = Record<string, any>
+>(
+  request: RequestType<TBody>,
+  config?: HooksQueryConfig<TData, TBody>,
+  deps?: DependencyList
+): QueryPageStoreType<TData, TBody> {
+  const store = useMemo(() => makePagination(request, config), deps ?? [])
+  useQueryHooks(store, config, deps)
+  return store
+}
+
+export function useInfinite<
+  TData = Record<string, any> | string,
+  TBody = Record<string, any>
+>(
+  request: RequestType<TBody>,
+  config?: HooksInfiniteConfig<TData, TBody>,
+  deps?: DependencyList
+): QueryInfiniteStoreType<TData, TBody> {
+  const store = useMemo(() => makeInfinite(request, config), deps ?? [])
+  useQueryHooks(store, config, deps)
+  return store
+}
+
+export function useMutation<
   TBody = Record<string, any>,
   TData = Record<string, any> | string
 >(
-  request: RequestType<TBody> | string,
-  config?: HooksFetchConfig<TData, TBody>,
+  request: RequestType<TBody>,
+  config?: HooksMutationConfig<TData, TBody>,
   deps?: DependencyList
-) {
-  const store = useMemo(() => makeSubmit(request, config), deps ?? [])
-  const _config: FetchConfig<TData, TBody> = {
-    submit: true,
-    ...(config ?? {})
-  }
-  useCommonHooks(store, _config, deps)
+): MutationStoreType<TData, TBody> {
+  const store = useMemo(() => makeMutation(request, config), deps ?? [])
+  useMutationHooks(store, config, deps)
   return store
 }

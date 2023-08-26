@@ -2,18 +2,25 @@ import {
   CachedData,
   DefaultBodyType,
   FetchBody,
-  FetchConfig,
   FetchRunConfig,
-  FetchStoreType,
   GetDefaultBody,
   Method,
-  PaginationType,
   RefreshConfigType,
   RequestMode,
   RequestResult,
   RequestType,
   UseResult,
-  FetchStatus
+  FetchStatus,
+  QueryConfig,
+  MutationConfig,
+  FetchConfig,
+  FetchStoreType,
+  QueryStoreType,
+  QueryPageStoreType,
+  QueryPageConfig,
+  RequestTypeFunction,
+  RequestTypePromise,
+  QueryInfiniteStoreType
 } from '../model'
 import { Art } from '../art'
 import { clearCache, createCacheKey, getCache, setCache } from '../utils/cache'
@@ -52,26 +59,20 @@ export function updateDefaultBody<P>(
 /**
  * 添加分页请求参数
  * @param store
- * @param pagination 是否使用分页
  */
-export function handlePageBody<R, P>(
-  store: FetchStoreType<R, P>,
-  pagination?: boolean
-): any {
+export function handlePageBody<R, P>(store: QueryStoreType<R, P>): any {
   let _body = store.body as any
-  if (pagination) {
-    const _store = store as FetchStoreType<R, P>
-    if (Art.config.convertPage) {
-      _body = {
-        ...(_body ?? {}),
-        ...Art.config.convertPage(_store.current!, _store.pageSize!)
-      }
-    } else {
-      _body = {
-        ...(_body ?? {}),
-        current: _store.current,
-        pageSize: _store.pageSize
-      }
+  const _store = store as QueryPageStoreType<R, P>
+  if (Art.config.convertPage) {
+    _body = {
+      ...(_body ?? {}),
+      ...Art.config.convertPage(_store.current!, _store.pageSize!)
+    }
+  } else {
+    _body = {
+      ...(_body ?? {}),
+      current: _store.current,
+      pageSize: _store.pageSize
     }
   }
   return _body
@@ -108,23 +109,64 @@ export function autoClear(store: { clear: () => void }, autoClear?: boolean) {
  * 获取当前配置项目
  * @param config
  */
-export function getMyConfig<R, P>(
-  config?: FetchConfig<R, P>
-): FetchConfig<R, P> {
-  const submit = config?.submit ?? false
+export function getQueryConfig<TData, TBody>(
+  config?: QueryConfig<TData, TBody>
+): QueryConfig<TData, TBody> {
   // 初始化默认配置
-  const defaultConfig = {
+  const defaultConfig: Partial<QueryConfig<TData, TBody>> = {
     status: true,
     loading: false,
     isDefaultSet: true,
     autoClear: false,
     cacheTime: 300000,
-    submit,
-    staleTime: 0,
-    showMessage: true,
-    showSuccessMessage: submit,
+    revalidate: 0,
+    retry: 3,
+    showMessage: false,
+    showSuccessMessage: false,
     showErrorMessage: true
-  } as Partial<FetchConfig<R, P>>
+  }
+  // 得到当前配置
+  return { ...defaultConfig, ...(config ?? {}) }
+}
+
+export function getQueryPageConfig<TData, TBody>(
+  config?: QueryPageConfig<TData, TBody>
+): QueryConfig<TData, TBody> {
+  // 初始化默认配置
+  const defaultConfig: Partial<QueryPageConfig<TData, TBody>> = {
+    status: true,
+    loading: false,
+    isDefaultSet: true,
+    autoClear: false,
+    cacheTime: 300000,
+    revalidate: 0,
+    retry: 3,
+    showMessage: false,
+    showSuccessMessage: false,
+    showErrorMessage: true,
+    pageSize: 10,
+    current: 1
+  }
+  // 得到当前配置
+  return { ...defaultConfig, ...(config ?? {}) }
+}
+
+/**
+ * 获取当前配置项目
+ * @param config
+ */
+export function getMutationConfig<R, P>(
+  config?: MutationConfig<R, P>
+): MutationConfig<R, P> {
+  // 初始化默认配置
+  const defaultConfig: Partial<MutationConfig<R, P>> = {
+    status: true,
+    loading: false,
+    isDefaultSet: true,
+    showMessage: true,
+    showSuccessMessage: true,
+    showErrorMessage: true
+  }
   // 得到当前配置
   return { ...defaultConfig, ...(config ?? {}) }
 }
@@ -166,6 +208,7 @@ export function handleEndLoading(config: {
 function isPromiseLike<T>(it: unknown): it is PromiseLike<T> {
   return it instanceof Promise || typeof (it as any)?.then === 'function'
 }
+
 /**
  * 发送请求接口
  * @param request 请求对象
@@ -204,10 +247,9 @@ export async function doRequest<T, P>(
   // 发送请求
   let myRes: UseResult<T>
 
-  try {
-    // 设置状态
-    await setStatus('loading')
-
+  let retryCount = config.retry ?? 0
+  const requestFun = async () => {
+    let result1: UseResult<T>
     // 请求接口
     const res = await request.request()
 
@@ -217,42 +259,69 @@ export async function doRequest<T, P>(
     if (convertRes) {
       const result = convertRes(res)
       if (isPromiseLike(result)) {
-        myRes = (await result) as UseResult<T>
+        result1 = (await result) as UseResult<T>
       } else {
-        myRes = result as UseResult<T>
+        result1 = result as UseResult<T>
       }
     } else {
-      myRes = res
+      result1 = res
     }
 
-    if (myRes.success) {
+    if (result1.success) {
       // 设置原始值
-      store.originData = myRes.data
+      store.originData = result1.data
       // 转换成前端想要的数据格式
       if (config.postData) {
-        myRes.data = config.postData(myRes.data)
+        result1.data = config.postData(result1.data)
       }
     }
+    setData(result1)
+    return result1
+  }
 
+  const retryFun = async (): Promise<UseResult<T>> => {
+    return new Promise((resolve) => {
+      setTimeout(async () => {
+        try {
+          retryCount--
+          resolve(await requestFun())
+        } catch (e) {
+          // 处理异常
+          myRes = handleRequestCatch(e, request.type) as UseResult<T>
+          if (!myRes.isCancel && retryCount > 0) {
+            resolve(await retryFun())
+          } else {
+            resolve(myRes)
+          }
+        }
+      }, (config.retryInterval ?? 1) * 1000)
+    })
+  }
+
+  try {
+    // 设置状态
+    await setStatus('loading')
+    myRes = await requestFun()
     // 设置状态
     await setStatus(myRes.success ? 'success' : 'error')
   } catch (e) {
     // 处理异常
     myRes = handleRequestCatch(e, request.type) as UseResult<T>
     if (!myRes.isCancel) {
-      // 设置状态
-      await setStatus('error')
-    } else {
-      // 设置状态
-      await setStatus('idle')
+      const checkRetry = config.checkRetry ?? Art.config.checkRetry
+      if (retryCount > 0 && (!checkRetry || checkRetry(myRes))) {
+        myRes = await retryFun()
+      }
     }
+    // 设置状态
+    await setStatus(
+      myRes.success ? 'success' : myRes.isCancel ? 'success' : 'error'
+    )
   }
 
   if (config.loading) {
     RequestMapping.del(key)
   }
-
-  setData(myRes)
 
   // 处理回调
   handleCallback<T, P>(config, myRes)
@@ -262,6 +331,114 @@ export async function doRequest<T, P>(
 
   // 结束loading
   handleEndLoading(config)
+
+  return myRes
+}
+
+/**
+ * 发送请求接口
+ * @param request 请求对象
+ * @param store store
+ * @param config 配置项目
+ * @param setData 设置数据
+ */
+export async function doRequestByInfinite<T, P>(
+  request: RequestResult,
+  store: QueryInfiniteStoreType<T, P>,
+  config: FetchConfig<T, P>,
+  setData: (res: UseResult<T>) => void
+): Promise<UseResult<T>> {
+  const setStatus = async (status: FetchStatus) => {
+    const loadingWait = async () => {
+      if (status !== 'loading' && config.loadingDelayMs) {
+        await waitTime(config.loadingDelayMs)
+      }
+    }
+
+    if (config?.status) {
+      await loadingWait()
+      store.isLoadingNextPage = status === 'loading'
+      store.isErrorNextPage = status === 'error'
+    }
+  }
+
+  // 发送请求
+  let myRes: UseResult<T>
+
+  let retryCount = config.retry ?? 0
+  const requestFun = async () => {
+    let result1: UseResult<T>
+    // 请求接口
+    const res = await request.request()
+
+    const convertRes = config.convertRes ?? Art.config.convertRes
+
+    // 转换数据
+    if (convertRes) {
+      const result = convertRes(res)
+      if (isPromiseLike(result)) {
+        result1 = (await result) as UseResult<T>
+      } else {
+        result1 = result as UseResult<T>
+      }
+    } else {
+      result1 = res
+    }
+
+    if (result1.success) {
+      // 设置原始值
+      store.originData = result1.data
+      // 转换成前端想要的数据格式
+      if (config.postData) {
+        result1.data = config.postData(result1.data)
+      }
+    }
+    setData(result1)
+    return result1
+  }
+
+  const retryFun = async (): Promise<UseResult<T>> => {
+    return new Promise((resolve) => {
+      setTimeout(async () => {
+        try {
+          retryCount--
+          resolve(await requestFun())
+        } catch (e) {
+          // 处理异常
+          myRes = handleRequestCatch(e, request.type) as UseResult<T>
+          if (!myRes.isCancel && retryCount > 0) {
+            resolve(await retryFun())
+          } else {
+            resolve(myRes)
+          }
+        }
+      }, (config.retryInterval ?? 1) * 1000)
+    })
+  }
+
+  try {
+    // 设置状态
+    await setStatus('loading')
+    myRes = await requestFun()
+    // 设置状态
+    await setStatus(myRes.success ? 'success' : 'error')
+  } catch (e) {
+    // 处理异常
+    myRes = handleRequestCatch(e, request.type) as UseResult<T>
+    if (!myRes.isCancel) {
+      const checkRetry = config.checkRetry ?? Art.config.checkRetry
+      if (retryCount > 0 && (!checkRetry || checkRetry(myRes))) {
+        myRes = await retryFun()
+      }
+    }
+    // 设置状态
+    await setStatus(
+      myRes.success ? 'success' : myRes.isCancel ? 'success' : 'error'
+    )
+  }
+
+  // 处理回调
+  handleCallback<T, P>(config, myRes)
 
   return myRes
 }
@@ -330,7 +507,7 @@ function handleRequestCatch(e: any, mode: RequestMode): UseResult {
  * @param fetchConfig 更多配置项目
  */
 export function getRequest(
-  request: RequestType | string,
+  request: RequestType,
   body?: any,
   method?: Method,
   fetchConfig?: any
@@ -340,11 +517,16 @@ export function getRequest(
   let _cancel: (() => void) | undefined
   let type: RequestMode = 'default'
 
-  if (typeof request === 'function') {
+  if (isPromiseLike(request)) {
     type = 'customize'
-    _request = () => request(body)
+    _request = () => (request as RequestTypePromise)(body)
   } else {
-    let url = request as string
+    let url: string | undefined
+    if (typeof request === 'function') {
+      url = (request as RequestTypeFunction)(body)
+    } else {
+      url = request as string
+    }
     const isPathParams = url.includes('{') && url.includes('}')
     const _method = method ?? (isPathParams ? 'GET' : body ? 'POST' : 'GET')
     const isPost = method === 'POST' || method === 'post'
@@ -482,8 +664,8 @@ export function throttle<R, P>(
  * @param res
  */
 export function setStoreCacheData<R, P>(
-  config: FetchConfig<R, P>,
-  request: RequestType<P> | string,
+  config: QueryConfig<R, P>,
+  request: RequestType<P>,
   store: FetchStoreType<R, P>,
   res: UseResult<R>
 ) {
@@ -493,27 +675,31 @@ export function setStoreCacheData<R, P>(
 
   const key = getCacheKey(config, request, store)
 
-  let pagination: PaginationType | undefined
-  try {
-    if (config.pagination) {
-      const { current, pageSize, total, offset } = store as FetchStoreType<R, P>
-      pagination = { current: current!, pageSize: pageSize!, total, offset }
-    }
-  } catch (e) {}
+  // TODO 分页逻辑之后处理
+  // let pagination: PaginationType | undefined
+  // try {
+  //   if (config.pagination) {
+  //     const { current, pageSize, total, offset } = store as FetchStoreType<R, P>
+  //     pagination = { current: current!, pageSize: pageSize!, total, offset }
+  //   }
+  // } catch (e) {}
 
   setCache<UseResult<R>, P>(key, {
     body: store.body as P,
     data: res,
-    time: new Date().getTime(),
-    pagination
+    time: new Date().getTime()
+    // pagination
   })
 }
 
 export function getStoreCacheData<R, P>(
-  config: FetchConfig<R, P>,
-  request: RequestType<P> | string,
-  store: FetchStoreType<R, P>
+  config: QueryConfig<R, P>,
+  request: RequestType<P>,
+  store?: FetchStoreType<R, P>
 ) {
+  if (!config.cache && (config.revalidate ?? 0) > 0) {
+    config.cache = true
+  }
   if (!config.cache) {
     return { cache: undefined, active: false }
   }
@@ -523,50 +709,56 @@ export function getStoreCacheData<R, P>(
   const cache = getCache<UseResult<R>, P>(key)
 
   if (cache) {
-    const cacheTime = config.cacheTime ?? 300000
-    if (cacheTime < 0 || new Date().getTime() - cache.time <= cacheTime) {
-      return { cache, active: true }
-    } else {
-      clearCache(key)
+    if ((config.cacheTime ?? 0) > 0) {
+      const cacheTime = config.cacheTime! * 1000
+      if (cacheTime < 0 || new Date().getTime() - cache.time <= cacheTime) {
+        return { cache, active: true }
+      } else {
+        clearCache(key)
+      }
     }
+    return { cache, active: true }
   }
   return { cache: undefined, active: false }
 }
 
 export function getCacheRequest<R, P>(
-  config: FetchConfig<R, P>,
+  config: QueryConfig<R, P>,
   cache: CachedData<UseResult<R>, P>,
-  store: FetchStoreType<R, P>
+  store: QueryStoreType<R, P>
 ): Promise<UseResult<R>> {
   const res = cache.data
   if (config.onSuccess) {
     config.onSuccess(res.data!, res, true)
   }
-  if (cache.pagination) {
-    try {
-      const _store = store as FetchStoreType<R, P>
-      const { current, pageSize, total, offset } = cache.pagination
-      _store.current = current
-      _store.pageSize = pageSize
-      _store.total = total
-      _store.offset = offset
-    } catch (e) {}
-  }
+  // if (cache.pagination) {
+  //   try {
+  //     const _store = store as FetchStoreType<R, P>
+  //     const { current, pageSize, total, offset } = cache.pagination
+  //     _store.current = current
+  //     _store.pageSize = pageSize
+  //     _store.total = total
+  //     _store.offset = offset
+  //   } catch (e) {}
+  // }
   store.data = cache.data.data
   store.body = cache.body
 
   // 控制新鲜度, 如果过期新鲜度
-  const staleTime = config.staleTime ?? 0
-  if (staleTime >= 0 && new Date().getTime() - cache.time > staleTime) {
-    store.run(undefined, { loading: false, status: false, refresh: true })
+  const revalidate = config.revalidate ?? 0
+  if (
+    revalidate >= 0 &&
+    new Date().getTime() - cache.time > revalidate * 1000
+  ) {
+    store.query(undefined, { loading: false, status: false, refresh: true })
   }
   return new Promise((resolve) => resolve(res))
 }
 
 export function getCacheKey<R, P>(
-  config: FetchConfig<R, P>,
-  request: RequestType<P> | string,
-  store: FetchStoreType<R, P>
+  config: QueryConfig<R, P>,
+  request: RequestType<P>,
+  store?: FetchStoreType<R, P>
 ) {
   let key
 
@@ -580,24 +772,23 @@ export function getCacheKey<R, P>(
 
   if (typeof config.cache === 'string') {
     key = createCacheKey(config.cache)
-  } else if (typeof config.cache === 'function') {
+  } else if (store && typeof config.cache === 'function') {
     const ids = config.cache(store.body as P)
     key = createCacheKey(request as string, ids)
   } else {
     key = createCacheKey(request as string)
   }
-  if (config.pagination) {
-    const { current, pageSize } = store as FetchStoreType<R, P>
-    return `${key}_${current}_${pageSize}`
-  }
+  // TODO 分页逻辑之后处理
+  // if (store && config.pagination) {
+  //   const { current, pageSize } = store as FetchStoreType<R, P>
+  //   return `${key}_${current}_${pageSize}`
+  // }
   return key
 }
 
 export function doRefresh<R, P>(
-  myConfig: FetchConfig<R, P>,
-  store: FetchStoreType<R>,
-  request: RequestType<P> | string,
-  currentRequest: RequestResult | undefined,
+  myConfig: QueryConfig<R, P>,
+  store: QueryStoreType<R>,
   config?: RefreshConfigType
 ) {
   myConfig = {
@@ -607,39 +798,61 @@ export function doRefresh<R, P>(
     ...(config ?? {}),
     refresh: true
   }
-  if (!currentRequest) {
-    return store.runSync(undefined, myConfig)
-  } else {
-    return doRequest<R, P>(currentRequest, store, myConfig, (res) =>
-      setResData(res, myConfig, store, request)
-    )
-  }
+  return store.querySync(undefined, myConfig)
 }
 
 // 设置返回数据
-export function setResData<R, P>(
-  res: UseResult<R>,
-  myConfig: FetchConfig<R, P>,
-  store: FetchStoreType<R>,
-  request: RequestType<P> | string
+export function setResData<TData, TBody>(
+  res: UseResult<TData>,
+  myConfig: FetchConfig<TData, TBody>,
+  store: FetchStoreType<TData>,
+  request: RequestType<TBody>
 ) {
   if (res.success) {
     if (myConfig.isDefaultSet) {
-      store.setData(res.data)
-      if (myConfig.pagination) {
-        ;(store as FetchStoreType).total = res.total ?? 0
-      }
-    }
-    if (myConfig?.status && store?.status === 'success') {
-      store.isEmpty =
-        !res.data || (res.data && res.data instanceof Array && !res.data.length)
+      store.setRes(res)
     }
     // 记录最后时间
     store.lastRequestTime = new Date().getTime()
-
     // 处理缓存
     setStoreCacheData(myConfig, request, store, res)
   } else if (!res.isCancel) {
     store.error = { message: res.message, code: res.code, status: res.status }
+  }
+}
+
+export function setResDataByInfinite<TData, TBody>(
+  res: UseResult<TData>,
+  myConfig: FetchConfig<TData, TBody>,
+  store: FetchStoreType<TData>,
+) {
+  if (res.success) {
+    if (myConfig.isDefaultSet) {
+      store.setRes(res)
+    }
+    // 记录最后时间
+    store.lastRequestTime = new Date().getTime()
+  } else if (!res.isCancel) {
+    store.error = { message: res.message, code: res.code, status: res.status }
+  }
+}
+
+/**
+ * 清理数据
+ * @param store
+ * @param config
+ * @param request
+ */
+export function clearData<TData, TBody>(
+  store: QueryStoreType,
+  config: QueryConfig<TData, TBody>,
+  request: RequestType<TBody>
+) {
+  store.originData = undefined
+  store.data = undefined
+  store.body = undefined
+  const key = getCacheKey(config, request, store)
+  if (key) {
+    clearCache(key)
   }
 }

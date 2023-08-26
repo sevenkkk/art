@@ -51,17 +51,22 @@ export function handleAxiosError(e: any) {
       if (Art.config.convertError) {
         return {
           message: axiosRes.message,
-          ...Art.config.convertError(response, defaultResult),
           success: false,
           status: response.status,
-          isCancel: false
+          isCancel: false,
+          ...Art.config.convertError(response, defaultResult)
         }
       } else {
         return defaultResult
       }
     } else {
-      console.log(e)
-      throw new Error(e)
+      return {
+        success: false,
+        status: 500,
+        code: '',
+        message: 'unknown error',
+        isCancel: false
+      }
     }
   }
 }

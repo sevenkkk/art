@@ -19,7 +19,13 @@ export function _getFetchRequest(
   body: any,
   requestInit?: RequestInit
 ): Promise<any> {
-  const input = Art.config.baseURL + url
+  let input = url
+  if (!url.startsWith('/')) {
+    input = `/${input}`
+  }
+  if (Art.config.baseURL) {
+    input = `${Art.config.baseURL}${input}`
+  }
   return fetch(input, {
     headers: {
       'Content-Type': 'application/json'
@@ -38,7 +44,12 @@ export function handleFetchError(e: any) {
   ) {
     return { success: false, isCancel: true, message: e.message }
   } else {
-    console.log(e)
-    throw new Error(e)
+    return {
+      success: false,
+      status: 500,
+      code: '',
+      message: 'unknown error',
+      isCancel: false
+    }
   }
 }

@@ -1,8 +1,17 @@
 import 'whatwg-fetch'
 import { Art, ArtConfigOptions } from './lib/art'
-import { makeFetch, useFetch, makeSubmit, useSubmit } from './lib/fetch'
+import {
+  makeQuery,
+  makeMutation,
+  useQuery,
+  useMutation,
+  makePagination,
+  usePagination,
+  makeInfinite,
+  useInfinite
+} from './lib/fetch'
 
-import { useAutoRun } from './lib/hooks'
+import { useAutoQuery, useAutoMutate } from './lib/hooks'
 import resso from './lib/obs/resso'
 
 export * from './lib/art-provider'
@@ -11,9 +20,14 @@ export {
   Art,
   ArtConfigOptions,
   resso,
-  makeFetch,
-  makeSubmit,
-  useFetch,
-  useSubmit,
-  useAutoRun
+  makeQuery,
+  makeMutation,
+  makePagination,
+  makeInfinite,
+  useQuery,
+  useMutation,
+  usePagination,
+  useInfinite,
+  useAutoQuery,
+  useAutoMutate
 }

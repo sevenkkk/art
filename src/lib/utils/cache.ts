@@ -5,7 +5,11 @@ const dataCache: Map<string, CachedData> = new Map()
 
 export function createCacheKey(key?: string, ids?: string[]) {
   const prefix = 'key'
-  return `${prefix}_${key}` + ids?.map((id) => `_${id}`)
+  let cacheKey = `${prefix}_${key}`
+  if (ids) {
+    cacheKey = `${cacheKey}_${ids?.map((id) => `_${id}`)}`
+  }
+  return cacheKey
 }
 
 export function setCache<TData, TBody>(

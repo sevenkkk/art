@@ -1,7 +1,9 @@
 import { FetchStoreType } from '../model'
 import { PluginReturn } from '../utils/plugin-utils'
 
-export function BodyPlugin<TData, TBody>(): PluginReturn<TData, TBody> {
+export function BodyPlugin<TData, TBody>(): PluginReturn<
+  FetchStoreType<TData, TBody>
+> {
   // 初始化状态
   const state = {
     body: undefined

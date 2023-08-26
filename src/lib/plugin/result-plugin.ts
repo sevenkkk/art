@@ -1,9 +1,16 @@
-import { FetchConfig, FetchStoreType } from '../model'
+import {
+  FetchStoreType,
+  QueryConfig,
+  QueryStoreType,
+  RequestType
+} from '../model'
 import { PluginReturn } from '../utils/plugin-utils'
+import { getStoreCacheData } from './fetch-service'
 
 export function ResultPlugin<TData, TBody>(
-  config?: FetchConfig<TData, TBody>
-): PluginReturn<TData, TBody> {
+  request: RequestType<TBody>,
+  config: QueryConfig<TData, TBody>
+): PluginReturn<QueryStoreType<TData, TBody>> {
   // 初始化状态
   const state: { originData?: TData; data?: TData } = {
     originData: undefined,
@@ -44,8 +51,14 @@ export function ResultPlugin<TData, TBody>(
         state.data = initData
         state.data = initData
       } else {
-        state.data = config?.initialData
-        state.data = config?.initialData
+        state.originData = config?.initialData as TData
+        state.data = config?.initialData as TData
+      }
+    } else if (config?.initializeCache === true) {
+      const { cache } = getStoreCacheData<TData, TBody>(config, request)
+      if (cache) {
+        state.originData = cache!.data.data
+        state.data = cache!.data.data
       }
     }
     if (!state.data && _placeholderData) {

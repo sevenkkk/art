@@ -1,6 +1,6 @@
 {
   "name": "@sevenvip666/react-art",
-  "version": "1.0.1",
+  "version": "1.1.6",
   "description": "a request template",
   "author": "seven",
   "license": "MIT",
@@ -10,8 +10,11 @@
   "source": "src/index.ts",
   "typings": "dist/index.d.ts",
   "exports": {
-    "require": "./dist/index.js",
-    "default": "./dist/index.modern.mjs"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "require": "./dist/index.js",
+      "default": "./dist/index.modern.mjs"
+    }
   },
   "engines": {
     "node": ">=10"

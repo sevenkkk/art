@@ -1,16 +1,16 @@
-import React from "react";
-import { ChangeEvent } from "react";
-import { resso, useFetch } from "art";
-import "./fetch-setup";
+import React from 'react'
+import { ChangeEvent } from 'react'
+import { resso, usePagination } from 'art'
+import './fetch-setup'
 
 export const store = resso({
-  tabsList: ["popular", "realTime", "month"],
+  tabsList: ['popular', 'realTime', 'month'],
   index: 0,
   count: 0
-});
+})
 
 const App = () => {
-  const { tabsList, index, count } = store;
+  const { tabsList, index, count } = store
 
   return (
     <div>
@@ -23,13 +23,12 @@ const App = () => {
       <button onClick={() => store.count++}>点击count+1 {count}</button>
       <ListDiv type={tabsList[index]} />
     </div>
-  );
-};
+  )
+}
 
 type ListDivPros = {
   type: string
 }
-
 
 type TestModel = {
   accId: string
@@ -40,7 +39,6 @@ type GoodsImgModel = {
   id: string
   fileName: string
 }
-
 
 /*const query = (body: { type: string }) => {
   return fetch('https://api-t.bagel7777.com/app/live/streamer/ranking/list', {
@@ -53,17 +51,17 @@ type GoodsImgModel = {
   })
 }*/
 export const ListDiv = ({ type }: ListDivPros) => {
-  const store = useFetch<TestModel>(
-    "/duxing/api/chaoyu_index_queryGoodsDetails_v1",
+  const store = usePagination<TestModel>(
+    '/duxing/api/chaoyu_index_queryGoodsDetails_v1/1',
     {
       defaultBody: {
-        "goodsId": "143610019661802561",
-        "language": "chineseZh"
+        goodsId: '143610019661802561',
+        language: 'chineseZh'
       },
-      pagination: true,
+      // revalidate: 10,
       onSuccess: () => {
-        console.log(store);
-      },
+        console.log(store)
+      }
       /*initialData: () => {
         return [
           {
@@ -84,17 +82,17 @@ export const ListDiv = ({ type }: ListDivPros) => {
       ]*/
     },
     [type]
-  );
+  )
 
-  const { data, isLoading, run } = store;
+  const { data, isLoading, query } = store
 
-  console.log('12321321');
+  console.log('12321321')
 
   const handleChange = (event: ChangeEvent) => {
     // @ts-ignore
-    const type = event.target.value;
-    run({ type });
-  };
+    const type = event.target.value
+    query({ type })
+  }
 
   return (
     <>
@@ -110,11 +108,12 @@ export const ListDiv = ({ type }: ListDivPros) => {
       <button onClick={() => store.cancel()}>点击取消请求</button>
       <input onChange={handleChange} />
 
-      <button onClick={() => store.setPageRun({ current: 2 })}>
+      <button onClick={() => store.setPageQuery({ current: 2 })}>
         点击获取第二页
       </button>
+      <button onClick={() => store.clear()}>清除</button>
     </>
-  );
-};
+  )
+}
 
-export default App;
+export default App

@@ -1,20 +1,30 @@
-import { FetchConfig, FetchStoreType, UseResult } from '../model'
+import {
+  FetchBody,
+  QueryConfig,
+  QueryPageConfig,
+  QueryPageStoreType,
+  QueryStoreType,
+  RequestType,
+  UseResult
+} from '../model'
 import { PluginReturn } from '../utils/plugin-utils'
+import { clearData, getPostBody, handlePageBody } from './fetch-service'
 
 export const PagePlugin = <TData, TBody>(
-  config?: FetchConfig<TData, TBody>
-): PluginReturn<TData, TBody> => {
+  request: RequestType<TBody>,
+  config?: QueryPageConfig<TData, TBody>
+): PluginReturn<QueryPageStoreType<TData, TBody>> => {
   // 初始化状态
   const state = {
-    current: config?.pagination ? 1 : undefined,
-    pageSize: config?.pagination ? config?.pageSize ?? 10 : undefined,
+    current: 1,
+    pageSize: config?.pageSize ?? 10,
     total: 0,
     offset: undefined
   }
 
   // 设置页码
   const setPage = (
-    store: FetchStoreType<TData>,
+    store: QueryPageStoreType<TData>,
     config: {
       current?: number
       pageSize?: number
@@ -31,41 +41,58 @@ export const PagePlugin = <TData, TBody>(
   }
 
   // 设置页面并且查询
-  const setPageRun = (
-    store: FetchStoreType<TData>,
+  const setPageQuery = (
+    store: QueryPageStoreType<TData>,
     config: {
       current?: number
       pageSize?: number
     }
   ): void => {
     setPage(store, config)
-    store.run()
+    store.query()
   }
 
-  const setPageRunSync = (
-    store: FetchStoreType<TData>,
+  const setPageQuerySync = (
+    store: QueryPageStoreType<TData>,
     config: {
       current?: number
       pageSize?: number
     }
   ): Promise<UseResult<TData>> => {
     setPage(store, config)
-    return store.runSync()
+    return store.querySync()
   }
 
   // 清理数据
-  const clear = (store: FetchStoreType<TData>) => {
+  const clear = (store: QueryPageStoreType<TData>) => {
+    clearData(store, config as QueryConfig<TData, TBody>, request)
     store.total = 0
     store.current = 1
+  }
+
+  const postBody = (
+    store: QueryStoreType<TData>,
+    postBody: (postBody: (body: FetchBody<TBody>) => any) => any
+  ) => {
+    // 处理分页
+    const _body = handlePageBody(store)
+    return getPostBody(_body, postBody)
+  }
+
+  const setRes = (store: QueryPageStoreType<TData>, res: UseResult<TData>) => {
+    store.setData(res.data)
+    store.total = res.total ?? 0
   }
 
   return {
     state,
     method: {
       setPage,
-      setPageRun,
-      setPageRunSync,
-      clear
+      setPageQuery,
+      setPageQuerySync,
+      clear,
+      setRes,
+      postBody
     }
   }
 }

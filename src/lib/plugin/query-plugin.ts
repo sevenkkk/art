@@ -1,14 +1,16 @@
 import {
-  FetchConfig,
   FetchRunConfig,
-  FetchStoreType,
+  QueryStoreType,
+  QueryConfig,
   RefreshConfigType,
   RequestResult,
   RequestType,
-  UseResult
+  UseResult,
+  FetchBody
 } from '../model'
 import {
   autoClear,
+  clearData,
   debounce,
   doRefresh,
   doRequest,
@@ -16,21 +18,20 @@ import {
   getPostBody,
   getRequest,
   getStoreCacheData,
-  handlePageBody,
   setResData,
   throttle,
   updateDefaultBody
 } from './fetch-service'
 import { PluginReturn } from '../utils/plugin-utils'
 
-export function FetchPlugin<TData, TBody>(
-  request: RequestType<TBody> | string,
-  config: FetchConfig<TData, TBody>
-): PluginReturn<TData, TBody> {
+export function QueryPlugin<TData, TBody>(
+  request: RequestType<TBody>,
+  config: QueryConfig<TData, TBody>
+): PluginReturn<QueryStoreType<TData, TBody>> {
+  const abortController = new AbortController()
+
   // 当前请求
   let currentRequest: RequestResult | undefined
-
-  const abortController = new AbortController()
 
   // 初始化状态
   const state = {
@@ -43,7 +44,7 @@ export function FetchPlugin<TData, TBody>(
    * @param refConfig 配置项
    */
   const refresh = (
-    store: FetchStoreType<TData, TBody>,
+    store: QueryStoreType<TData, TBody>,
     refConfig?: RefreshConfigType
   ) => {
     refreshSync(store, refConfig).then()
@@ -55,16 +56,10 @@ export function FetchPlugin<TData, TBody>(
    * @param refConfig 配置项
    */
   const refreshSync = (
-    store: FetchStoreType<TData, TBody>,
+    store: QueryStoreType<TData, TBody>,
     refConfig?: RefreshConfigType
   ): Promise<UseResult<TData>> => {
-    return doRefresh<TData, TBody>(
-      config,
-      store,
-      request,
-      currentRequest,
-      refConfig
-    )
+    return doRefresh<TData, TBody>(config, store, refConfig)
   }
 
   /**
@@ -73,12 +68,12 @@ export function FetchPlugin<TData, TBody>(
    * @param body 请求体
    * @param runConfig 配置项
    */
-  const run = (
-    store: FetchStoreType<TData, TBody>,
+  const query = (
+    store: QueryStoreType<TData, TBody>,
     body?: Partial<TBody>,
     runConfig?: FetchRunConfig
   ) => {
-    runSync(store, body, runConfig).then()
+    querySync(store, body, runConfig).then()
   }
 
   /**
@@ -87,8 +82,8 @@ export function FetchPlugin<TData, TBody>(
    * @param body 请求体
    * @param runConfig 配置项
    */
-  const runSync = (
-    store: FetchStoreType<TData, TBody>,
+  const querySync = (
+    store: QueryStoreType<TData, TBody>,
     body?: Partial<TBody>,
     runConfig?: FetchRunConfig
   ) => {
@@ -105,18 +100,15 @@ export function FetchPlugin<TData, TBody>(
       )
 
       // 如果有缓存 并且缓存有效
-      if (!config?.refresh && cache && active) {
+      if (!myConfig?.refresh && cache && active) {
         return getCacheRequest<TData, TBody>(myConfig, cache, store)
       } else {
         // 设置body
         updateDefaultBody<TBody>(store, myConfig.defaultBody, body)
-        // 处理分页
-        let _body = handlePageBody(store, myConfig.pagination)
         // 获取准备提交的请求体
-        _body = getPostBody(_body, myConfig.postBody)
+        const _body = store.postBody(myConfig.postBody)
         // 获取请求体
         currentRequest = getRequest(request, _body, myConfig.method)
-
         // 发送请求
         return doRequest<TData, TBody>(currentRequest, store, myConfig, (res) =>
           setResData(res, myConfig, store, request)
@@ -138,7 +130,18 @@ export function FetchPlugin<TData, TBody>(
     )(body, runConfig)
   }
 
-  const cancel = (store: FetchStoreType) => {
+  const postBody = (
+    store: QueryStoreType<TData>,
+    postBody: (postBody: (body: FetchBody<TBody>) => any) => any
+  ) => {
+    return getPostBody(store.body, postBody)
+  }
+
+  const setRes = (store: QueryStoreType<TData>, res: UseResult<TData>) => {
+    store.setData(res.data)
+  }
+
+  const cancel = (store: QueryStoreType) => {
     if (currentRequest?.cancel) {
       currentRequest?.cancel!()
     }
@@ -146,14 +149,22 @@ export function FetchPlugin<TData, TBody>(
     store.setStatus('idle')
   }
 
-  const clear = (store: FetchStoreType) => {
-    store.data = undefined
-    store.body = undefined
-    store.isEmpty = false
+  const clear = (store: QueryStoreType) => {
+    clearData(store, config, request)
+    store.setStatus('idle')
   }
 
   return {
     state,
-    method: { run, runSync, refresh, refreshSync, cancel, clear }
+    method: {
+      query,
+      querySync,
+      refresh,
+      refreshSync,
+      cancel,
+      clear,
+      setRes,
+      postBody
+    }
   }
 }

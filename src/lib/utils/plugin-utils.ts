@@ -1,28 +1,25 @@
-import { FetchStoreType } from '../model'
+import { getObserver } from '../obs/observer'
 
-export type PluginReturn<TData, TBody> = {
+export type PluginReturn<S> = {
   state?: Record<string, any>
   method?: {
-    [key: string]: (
-      store: FetchStoreType<TData, TBody>,
-      ...args: unknown[]
-    ) => void
+    [key: string]: (store: S, ...args: unknown[]) => void
   }
 }
 
-type MethodType<TData = unknown, TBody = unknown> = (
-  store: FetchStoreType<TData, TBody>,
-  ...args: unknown[]
-) => void
+type MethodType<T extends unknown> = (store: T, ...args: unknown[]) => void
 
 /**
  *  方法第一项注入store
  * @param method 方法对象
  * @param getStore 获取store
  */
-export const getMethodInjectStore = <T extends Record<string, MethodType>>(
+export const getMethodInjectStore = <
+  S,
+  T extends Record<string, MethodType<S>>
+>(
   method: T,
-  getStore: () => FetchStoreType
+  getStore: () => S
 ) => {
   const result = {} as any
   Object.keys(method).forEach((key: keyof T) => {
@@ -37,9 +34,7 @@ export const getMethodInjectStore = <T extends Record<string, MethodType>>(
   return result
 }
 
-export const handlePlugins = <TData, TBody>(
-  pluginList: PluginReturn<TData, TBody>[]
-) => {
+export const handlePlugins = <S>(pluginList: PluginReturn<S>[]) => {
   const state = pluginList
     .map((item) => item.state)
     .reduce(
@@ -51,7 +46,16 @@ export const handlePlugins = <TData, TBody>(
     .map((item) => item.method)
     .reduce((previousValue, currentValue) => {
       return { ...previousValue, ...currentValue }
-    }, {}) as Record<string, MethodType>
+    }, {}) as Record<string, MethodType<S>>
 
-  return { state, method }
+  return { state: state ?? {}, method }
+}
+
+export const getMyStore = <S>(pluginList: PluginReturn<S>[]) => {
+  const { state, method } = handlePlugins(pluginList)
+  const store: S = getObserver()<S>({
+    ...state,
+    ...getMethodInjectStore(method, () => store)
+  })
+  return store
 }

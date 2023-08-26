@@ -1,16 +1,21 @@
 import { DependencyList, useEffect } from 'react'
 import { useBrowserPageChange } from './browser-page-hooks'
-import { FetchStoreType, HooksFetchConfig } from '../model'
+import {
+  HooksMutationConfig,
+  HooksQueryConfig,
+  MutationStoreType,
+  QueryStoreType
+} from '../model'
 
-export function useCommonHooks(
-  store: FetchStoreType,
-  config?: HooksFetchConfig,
+export function useQueryHooks(
+  store: QueryStoreType,
+  config?: HooksQueryConfig,
   deps?: DependencyList
 ) {
   useEffect(() => {
-    const manual = config?.manual ?? config?.submit ?? false
+    const manual = config?.manual ?? false
     if (!manual) {
-      store.run()
+      store.query()
     }
     let interval: any
     if (config?.pollingIntervalMs) {
@@ -18,7 +23,7 @@ export function useCommonHooks(
         clearInterval(interval)
       }
       interval = setInterval(() => {
-        store.run()
+        store.query()
       }, config.pollingIntervalMs)
     }
     return () => {
@@ -39,7 +44,7 @@ export function useCommonHooks(
           (config?.refreshOnWindowFocusTimespanMs ?? 0)
       )
         if (config?.refreshOnWindowFocusMode === 'run') {
-          store.run()
+          store.query()
         } else {
           store.refresh()
         }
@@ -47,12 +52,63 @@ export function useCommonHooks(
   }, [visibilityChange])
 }
 
-export function useAutoRun<T>(
-  store: FetchStoreType<any, T>,
+export function useAutoQuery<T>(
+  store: QueryStoreType<any, T>,
   body?: T,
   deps?: DependencyList
 ) {
   useEffect(() => {
-    store.run(body)
+    store.query(body)
+  }, deps ?? [])
+}
+
+export function useMutationHooks(
+  store: MutationStoreType,
+  config?: HooksMutationConfig,
+  deps?: DependencyList
+) {
+  useEffect(() => {
+    const manual = config?.manual ?? true
+    if (!manual) {
+      store.mutate()
+    }
+    let interval: any
+    if (config?.pollingIntervalMs) {
+      if (interval) {
+        clearInterval(interval)
+      }
+      interval = setInterval(() => {
+        store.mutate()
+      }, config.pollingIntervalMs)
+    }
+    return () => {
+      if (interval) {
+        clearInterval(interval)
+      }
+      store.cancel()
+    }
+  }, deps ?? [])
+
+  const { visibilityChange } = useBrowserPageChange()
+
+  useEffect(() => {
+    if (config?.refreshOnWindowFocus && visibilityChange) {
+      if (
+        !store.lastRequestTime ||
+        new Date().getTime() - store.lastRequestTime >
+          (config?.refreshOnWindowFocusTimespanMs ?? 0)
+      )
+        store.mutate()
+    }
+  }, [visibilityChange])
+}
+
+export function useAutoMutate<T>(
+  store: MutationStoreType<any, T>,
+  body?: T,
+  deps?: DependencyList
+) {
+  useEffect(() => {
+    store.mutate(body)
   }, deps ?? [])
 }
