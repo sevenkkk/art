@@ -1,6 +1,5 @@
-import { CachedData, UseResult } from './model'
-import { AxiosInstance, AxiosStatic } from './fetch/axios/axios'
-import resso from './obs/resso'
+import { CachedData, RequestMode, UseResult } from './model'
+import { type AxiosInstance, type AxiosStatic } from 'axios'
 
 export type ResultType = UseResult | Promise<UseResult>
 
@@ -14,22 +13,24 @@ export interface ArtConfigOptions {
     instance?: AxiosInstance // axios 实例
     instanceCallback?: (instance: AxiosInstance) => void // axios 创建实例回调
   }
-  observable?: any // 监听者对象
   showErrorMessage?: (res: UseResult) => void // 显示错误信息
   showSuccessMessage?: (res: UseResult) => void // 显示成功消息
   startLoading?: () => void
   endLoading?: () => void
-  convertRes?: (res: any) => ResultType
+  convertRes?: (res: any, mode: RequestMode) => ResultType
   convertError?: (res: any, defaultResult: UseResult) => Partial<UseResult>
-  convertPage?: (current: number, pageSize: number) => any
+  convertPage?: (pageInfo: {
+    current: number
+    pageSize: number
+    nextToken?: string
+  }) => any
   handleHttpError?: (resError: any) => void
+  handleCustomHttpError?: (resError: any) => UseResult
   localCache?: boolean
   setCacheData?: (key: string, data: CachedData) => void
   clearCacheData?: (key: string) => void
   checkRetry?: <TData>(res: UseResult<TData>) => boolean
-  getCacheData?: <TData, TBody>(
-    key: string
-  ) => CachedData<TData, TBody> | undefined
+  getCacheData?: <Res, TBody>(key: string) => CachedData<Res, TBody> | undefined
 }
 
 export class Art {
@@ -39,15 +40,14 @@ export class Art {
 
   // Default global configuration
   static config: ArtConfigOptions = {
-    observable: resso,
     showErrorMessage: (res) => {
       console.log(res)
     },
     showSuccessMessage: (res) => {
       console.log(res)
     },
-    convertPage: (page, pageSize) => {
-      return { page, pageSize }
+    convertPage: ({ current, pageSize, nextToken }) => {
+      return { page: current, pageSize, nextToken }
     },
     convertRes: async (res: Response): Promise<UseResult> => {
       const { data, count } = await res.json()

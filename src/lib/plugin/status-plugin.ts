@@ -1,9 +1,9 @@
-import { FetchStatus, FetchStoreType } from '../model'
-import { PluginReturn } from '../utils/plugin-utils'
+import { ErrorType, FetchStatus, FetchStoreType } from '../model'
+import { PluginReturn, StoreType } from '../utils/plugin-utils'
 import { ID } from '../utils/ID'
 
 export function StatusPlugin<TData, TBody>(): PluginReturn<
-  FetchStoreType<TData, TBody>
+  StoreType<FetchStoreType<TData, TBody>>
 > {
   // 初始化状态
   const state = {
@@ -17,11 +17,22 @@ export function StatusPlugin<TData, TBody>(): PluginReturn<
   }
 
   // 设置状态
-  const setStatus = (store: FetchStoreType, status: FetchStatus) => {
-    store.status = status
-    store.isLoading = status === 'loading'
-    store.isError = status === 'error'
-    store.isSuccess = status === 'success'
+  const setStatus = (
+    store: StoreType<FetchStoreType>,
+    status: FetchStatus,
+    error?: ErrorType
+  ) => {
+    const status1 = {
+      status,
+      isLoading: status === 'loading',
+      isError: status === 'error',
+      isSuccess: status === 'success'
+    }
+    if (error) {
+      store({ ...status1, error })
+    } else {
+      store(status1)
+    }
   }
 
   return {

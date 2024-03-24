@@ -21,6 +21,7 @@
     "react-dom": "file:../../node_modules/react-dom",
     "react-scripts": "file:../../node_modules/react-scripts",
     "typescript": "file:../../node_modules/typescript",
+    "http-proxy-middleware": "file:../../node_modules/http-proxy-middleware",
     "art": "file:../../"
   },
   "devDependencies": {

@@ -15,7 +15,7 @@ export function useQueryHooks(
   useEffect(() => {
     const manual = config?.manual ?? false
     if (!manual) {
-      store.query()
+      store.query().then()
     }
     let interval: any
     if (config?.pollingIntervalMs) {
@@ -23,7 +23,7 @@ export function useQueryHooks(
         clearInterval(interval)
       }
       interval = setInterval(() => {
-        store.query()
+        store.query().then()
       }, config.pollingIntervalMs)
     }
     return () => {
@@ -44,9 +44,9 @@ export function useQueryHooks(
           (config?.refreshOnWindowFocusTimespanMs ?? 0)
       )
         if (config?.refreshOnWindowFocusMode === 'run') {
-          store.query()
+          store.query().then()
         } else {
-          store.refresh()
+          store.refresh().then()
         }
     }
   }, [visibilityChange])
@@ -58,7 +58,7 @@ export function useAutoQuery<T>(
   deps?: DependencyList
 ) {
   useEffect(() => {
-    store.query(body)
+    store.query(body).then()
   }, deps ?? [])
 }
 
@@ -70,7 +70,7 @@ export function useMutationHooks(
   useEffect(() => {
     const manual = config?.manual ?? true
     if (!manual) {
-      store.mutate()
+      store.mutate().then()
     }
     let interval: any
     if (config?.pollingIntervalMs) {
@@ -78,7 +78,7 @@ export function useMutationHooks(
         clearInterval(interval)
       }
       interval = setInterval(() => {
-        store.mutate()
+        store.mutate().then()
       }, config.pollingIntervalMs)
     }
     return () => {
@@ -98,7 +98,7 @@ export function useMutationHooks(
         new Date().getTime() - store.lastRequestTime >
           (config?.refreshOnWindowFocusTimespanMs ?? 0)
       )
-        store.mutate()
+        store.mutate().then()
     }
   }, [visibilityChange])
 }
@@ -109,6 +109,6 @@ export function useAutoMutate<T>(
   deps?: DependencyList
 ) {
   useEffect(() => {
-    store.mutate(body)
+    store.mutate(body).then()
   }, deps ?? [])
 }

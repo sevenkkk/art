@@ -3,11 +3,11 @@ import { Art } from '../art'
 
 const dataCache: Map<string, CachedData> = new Map()
 
-export function createCacheKey(key?: string, ids?: string[]) {
+export function createCacheKey(key?: string, suffix?: string) {
   const prefix = 'key'
   let cacheKey = `${prefix}_${key}`
-  if (ids) {
-    cacheKey = `${cacheKey}_${ids?.map((id) => `_${id}`)}`
+  if (suffix) {
+    cacheKey = `${cacheKey}_${suffix}`
   }
   return cacheKey
 }

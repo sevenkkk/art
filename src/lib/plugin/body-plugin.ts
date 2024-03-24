@@ -1,8 +1,8 @@
 import { FetchStoreType } from '../model'
-import { PluginReturn } from '../utils/plugin-utils'
+import { PluginReturn, StoreType } from '../utils/plugin-utils'
 
 export function BodyPlugin<TData, TBody>(): PluginReturn<
-  FetchStoreType<TData, TBody>
+  StoreType<FetchStoreType<TData, TBody>>
 > {
   // 初始化状态
   const state = {
@@ -11,7 +11,7 @@ export function BodyPlugin<TData, TBody>(): PluginReturn<
 
   // 设置body
   const setBody = (
-    store: FetchStoreType,
+    store: StoreType<FetchStoreType>,
     inBody: Partial<TBody>,
     replace = false
   ): void => {

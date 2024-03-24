@@ -1,15 +1,15 @@
-import React, { PropsWithChildren } from 'react'
+import React, { PropsWithChildren, useRef } from 'react'
 import { Art, ArtConfigOptions } from './art'
-
-let init = false
 
 type Props = PropsWithChildren<{
   config?: ArtConfigOptions
 }>
 
 export function ArtProvider({ children, config }: Props) {
-  if (!init) {
-    init = true
+  const init = useRef(false)
+
+  if (!init.current) {
+    init.current = true
     Art.setup(config)
   }
 

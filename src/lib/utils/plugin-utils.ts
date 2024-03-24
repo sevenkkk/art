@@ -1,4 +1,4 @@
-import { getObserver } from '../obs/observer'
+import resso from 'resso'
 
 export type PluginReturn<S> = {
   state?: Record<string, any>
@@ -51,9 +51,15 @@ export const handlePlugins = <S>(pluginList: PluginReturn<S>[]) => {
   return { state: state ?? {}, method }
 }
 
-export const getMyStore = <S>(pluginList: PluginReturn<S>[]) => {
+export type StoreType<S extends Record<string, unknown>> = ReturnType<
+  typeof resso<S>
+>
+
+export const getMyStore = <S extends Record<string, unknown>>(
+  pluginList: PluginReturn<StoreType<S>>[]
+) => {
   const { state, method } = handlePlugins(pluginList)
-  const store: S = getObserver()<S>({
+  const store: ReturnType<typeof resso<S>> = resso<S>({
     ...state,
     ...getMethodInjectStore(method, () => store)
   })

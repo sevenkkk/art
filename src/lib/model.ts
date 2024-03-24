@@ -39,6 +39,7 @@ export interface UseResult<TData = unknown> {
   total?: number
   isCancel?: boolean
   other?: any
+  isSame?: boolean
 }
 
 export type GetDefaultBody<TBody> = () => Partial<TBody>
@@ -48,7 +49,25 @@ export type RequestType<TBody = unknown> =
   | RequestTypePromise<TBody>
   | string
   | RequestTypeFunction<TBody>
+
+export type RequestPageType<TBody = unknown> =
+  | RequestTypePromise<RequestPageTypeBody<TBody>>
+  | string
+  | RequestTypeFunction<RequestPageTypeBody<TBody>>
+
+export type ExtendKeyType<T> = {
+  [Key in keyof T]: T[Key]
+}
+
+type RequestPageTypeBody<T> = ExtendKeyType<T> & RequestPageBody
+
 export type RequestTypePromise<T = unknown> = (body: T) => Promise<any>
+
+export type RequestPageBody = {
+  nextToken?: string
+  current: number
+  pageSize: number
+}
 export type RequestTypeFunction<T = unknown> = (body: T) => string
 export type FetchConfig<TData = unknown, TBody = unknown> = {
   status?: boolean // 是否更新状态
@@ -62,10 +81,12 @@ export type FetchConfig<TData = unknown, TBody = unknown> = {
   showMessage?: boolean // 是否显示成功失败消息
   showErrorMessage?: boolean // 是否显示错误消息
   showSuccessMessage?: boolean // 是否显示成功消息
-  onSuccess?: (data: TData, res: UseResult<TData>, cache: boolean) => void
+  successMessage?: string // 成功提示
+  errorMessage?: string // 错误提示
+  onSuccess?: (data: TData, cache: boolean, isSome?: boolean) => void
   onError?: (res: UseResult<TData>) => void // 失败回调
   onComplete?: (res: UseResult<TData>) => void // 完成回调
-  convertRes?: (res: any) => ResultType // 请求响应体转换
+  convertRes?: (res: any, mode: RequestMode) => ResultType // 请求响应体转换
   postData?: (data: any) => TData // data转换
   loadingDelayMs?: number // 延迟loading时间
   debounceMs?: number // 防抖时间
@@ -77,7 +98,9 @@ export type FetchConfig<TData = unknown, TBody = unknown> = {
 
 export type BaseQueryConfig<TData = unknown, TBody = unknown> = {
   autoClear?: boolean // 是否自动清空
-  cache?: boolean | string | ((body?: TBody) => string[]) // 缓存key
+  cache?: boolean | string | ((body?: TBody) => string) // 缓存key
+  cacheLoading?: boolean // 缓存时是否显示loading
+  cacheStatus?: boolean // 缓存时是否显示状态
   cacheTime?: number // 单位秒。设置缓存数据回收时间 默认缓存数据 5 分钟后回收
   revalidate?: number // 单位秒。重新验证
   initialData?: TData | (() => TData) // 初始化data
@@ -97,12 +120,11 @@ export type StorePageConfig = {
   pageSize?: number // 每页个数
 }
 
-export type StoreInfiniteConfig<TData> = {
+export type StoreInfiniteConfig = {
   pageSize?: number // 每页个数
-  nextPageRequestBody: (
-    lastPage: UseResult<TData[]>,
-    page: StorePageConfig
-  ) => Record<string, any>
+  infinite?: boolean // 是否无限
+  getNextToken?: (res: any) => string
+  hasNextPage?: (res: any) => boolean
 }
 
 export type QueryConfig<TData = unknown, TBody = unknown> = FetchConfig<
@@ -110,7 +132,7 @@ export type QueryConfig<TData = unknown, TBody = unknown> = FetchConfig<
   TBody
 > &
   FetchRunConfig &
-  BaseQueryConfig
+  BaseQueryConfig<TData, TBody>
 
 export type MutationConfig<TData = unknown, TBody = unknown> = FetchConfig<
   TData,
@@ -122,7 +144,7 @@ export type QueryPageConfig<TData = unknown, TBody = unknown> = FetchConfig<
   TBody
 > &
   FetchRunConfig &
-  BaseQueryConfig &
+  BaseQueryConfig<TData, TBody> &
   StorePageConfig
 
 export type QueryInfiniteConfig<TData = unknown, TBody = unknown> = FetchConfig<
@@ -130,8 +152,8 @@ export type QueryInfiniteConfig<TData = unknown, TBody = unknown> = FetchConfig<
   TBody
 > &
   FetchRunConfig &
-  BaseQueryConfig &
-  StoreInfiniteConfig<TData>
+  BaseQueryConfig<TData, TBody> &
+  StoreInfiniteConfig
 export type RefreshConfigType = { status?: boolean; loading?: boolean }
 
 export type FetchRunConfig = RefreshConfigType & {
@@ -170,7 +192,7 @@ export type FetchStatusStoreType = {
   isError: boolean // 是否错误
   isSuccess: boolean // 是否成功
   error?: ErrorType // 错误状态
-  setStatus: (status: FetchStatus) => void // 设置状态
+  setStatus: (status: FetchStatus, error?: ErrorType) => void // 设置状态
   lastRequestTime?: number // 最后请求时间
 }
 
@@ -182,7 +204,10 @@ export type FetchBodyStoreType<TBody> = {
 export type FetchDataStoreType<TData = unknown> = {
   originData?: any // 请求数据原始值
   data?: TData // 请求数据当前值
-  setData: (data?: TData) => void // 设置当前data
+  setData: (
+    data?: TData extends object ? Partial<TData> : TData,
+    replace?: boolean
+  ) => void // 设置当前data
 }
 
 export type FetchPageStoreType<TData = unknown> = {
@@ -190,23 +215,34 @@ export type FetchPageStoreType<TData = unknown> = {
   pageSize?: number // 分页数量
   total: number // 总数
   setPage: (config: { current?: number; pageSize?: number }) => void // 设置页码
-  setPageQuery: (config: { current?: number; pageSize?: number }) => void
-  setPageQuerySync: (config: {
+  setPageQuerySync: (config: { current?: number; pageSize?: number }) => void
+  setPageQuery: (config: {
     current?: number
     pageSize?: number
   }) => Promise<UseResult<TData>>
 }
 
-export type FetchInfiniteStoreType<TData = unknown> = {
-  data: TData[]
-  lastPage?: UseResult<TData[]>
-  current: number
-  pageSize?: number // 分页数量
+export type FetchInfiniteStoreType<TData extends Array<unknown>> = {
+  current: number // 当前页
+  pageSize: number // 分页数量
+  pageTokens: Array<string | undefined> // 所有分页游标
   total: number // 总数
   hasNextPage: boolean
   isLoadingNextPage: boolean
   isErrorNextPage: boolean
-  queryNextPage?: () => Promise<UseResult<TData[]>> // 加载更多
+  queryByPage: (
+    pageConfig?: {
+      current?: number
+      pageSize?: number
+    },
+    runConfig?: FetchRunConfig
+  ) => Promise<UseResult<TData>>
+  queryNextPage: (
+    pageConfig?: {
+      current?: number
+    },
+    runConfig?: FetchRunConfig
+  ) => Promise<UseResult<TData>> // 加载更多
 }
 
 export type FetchStoreType<
@@ -219,7 +255,6 @@ export type FetchStoreType<
       postBody?: (body: FetchBody<TBody>) => any,
       nextPageRequestBody?: () => Record<string, any>
     ) => any
-    setRes: (res: UseResult<TData>) => void
     lastRequestTime?: number // 最后请求时间
     cancel: (message?: string) => void
     clear: () => void
@@ -229,24 +264,25 @@ export type QueryStoreType<TData = unknown, TBody = unknown> = FetchStoreType<
   TData,
   TBody
 > & {
-  querySync: (
+  query: (
     body?: Partial<TBody>,
     config?: FetchRunConfig
   ) => Promise<UseResult<TData>>
-  query: (body?: Partial<TBody>, config?: FetchRunConfig) => void
-  refreshSync: (config?: RefreshConfigType) => Promise<UseResult<TData>>
-  refresh: (config?: RefreshConfigType) => void
+  querySync: (body?: Partial<TBody>, config?: FetchRunConfig) => void
+  refresh: (config?: RefreshConfigType) => Promise<UseResult<TData>>
+  refreshSync: (config?: RefreshConfigType) => void
+  setCache: (data: TData) => void
 }
 
 export type MutationStoreType<
   TData = unknown,
   TBody = unknown
 > = FetchStoreType<TData, TBody> & {
-  mutateSync: (
+  mutate: (
     body?: Partial<TBody>,
     config?: FetchRunConfig
   ) => Promise<UseResult<TData>>
-  mutate: (body?: Partial<TBody>, config?: FetchRunConfig) => void
+  mutateSync: (body?: Partial<TBody>, config?: FetchRunConfig) => void
 }
 
 export type QueryPageStoreType<
@@ -255,17 +291,14 @@ export type QueryPageStoreType<
 > = QueryStoreType<TData, TBody> & FetchPageStoreType<TData>
 
 export type QueryInfiniteStoreType<
-  TData = unknown,
+  TData extends Array<any>,
   TBody = unknown
-> = QueryStoreType<TData, TBody> &
-  Omit<QueryStoreType, 'data'> &
-  FetchInfiniteStoreType<TData>
+> = QueryStoreType<TData, TBody> & FetchInfiniteStoreType<TData>
 
 export type PaginationType = {
   current: number
   pageSize: number
   total: number
-  offset?: string
 }
 
 export type CachedData<TData = unknown, TBody = unknown> = {
@@ -279,6 +312,7 @@ export type RequestMode = 'customize' | 'default' | 'axios'
 
 export type RequestResult = {
   type: RequestMode
+  isFetch?: boolean
   request: () => Promise<any>
   cancel?: () => void
 }

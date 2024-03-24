@@ -3,24 +3,22 @@ import {
   MutationConfig,
   MutationStoreType,
   RequestResult,
-  RequestType,
-  UseResult
+  RequestType
 } from '../model'
 import {
-  debounce,
-  doRequest,
+  createRequest,
+  fetchCancel,
   getPostBody,
   getRequest,
-  setResData,
-  throttle,
   updateDefaultBody
-} from './fetch-service'
-import { PluginReturn } from '../utils/plugin-utils'
+} from './service/fetch-service'
+import { PluginReturn, StoreType } from '../utils/plugin-utils'
+import { doRequest } from './service/query-service'
 
 export function MutationPlugin<TData, TBody>(
   request: RequestType<TBody>,
   config: MutationConfig<TData, TBody>
-): PluginReturn<MutationStoreType<TData, TBody>> {
+): PluginReturn<StoreType<MutationStoreType<TData, TBody>>> {
   // 当前请求
   let currentRequest: RequestResult | undefined
 
@@ -37,12 +35,12 @@ export function MutationPlugin<TData, TBody>(
    * @param body 请求体
    * @param runConfig 配置项
    */
-  const mutate = (
-    store: MutationStoreType<TData, TBody>,
+  const mutateSync = (
+    store: StoreType<MutationStoreType<TData, TBody>>,
     body?: Partial<TBody>,
     runConfig?: FetchRunConfig
   ) => {
-    mutateSync(store, body, runConfig).then()
+    mutate(store, body, runConfig).then()
   }
 
   /**
@@ -51,59 +49,47 @@ export function MutationPlugin<TData, TBody>(
    * @param body 请求体
    * @param runConfig 配置项
    */
-  const mutateSync = (
-    store: MutationStoreType<TData, TBody>,
+  const mutate = (
+    store: StoreType<MutationStoreType<TData, TBody>>,
     body?: Partial<TBody>,
     runConfig?: FetchRunConfig
   ) => {
     const requestFun = (body?: Partial<TBody>, runConfig?: FetchRunConfig) => {
       const myConfig = { ...config, ...runConfig }
       // 设置body
-      updateDefaultBody<TBody>(store, myConfig.defaultBody, body)
+      updateDefaultBody<TBody>(
+        store,
+        myConfig.replaceBody,
+        myConfig.defaultBody,
+        body
+      )
       // 获取准备提交的请求体
       const _body = getPostBody(store.body, myConfig.postBody)
       // 获取请求体
       currentRequest = getRequest(request, _body, myConfig.method)
-
       // 发送请求
-      return doRequest<TData, TBody>(currentRequest, store, myConfig, (res) =>
-        setResData(res, myConfig, store, request)
-      )
+      return doRequest<TData, TBody>(currentRequest, store, myConfig)
     }
-    if (config.throttleMs) {
-      return throttle(
-        requestFun,
-        abortController,
-        config.throttleMs
-      )(body, runConfig)
-    }
-
-    return debounce(
-      requestFun,
-      abortController,
-      config.debounceMs
-    )(body, runConfig)
-  }
-  const setRes = (store: MutationStoreType<TData>, res: UseResult<TData>) => {
-    store.setData(res.data)
+    return createRequest(config, abortController, requestFun, body, runConfig)
   }
 
-  const cancel = (store: MutationStoreType) => {
-    if (currentRequest?.cancel) {
-      currentRequest?.cancel!()
-    }
-    abortController.abort()
-    store.setStatus('idle')
+  const cancel = (store: StoreType<MutationStoreType>) => {
+    fetchCancel(store, abortController, currentRequest)
   }
 
-  const clear = (store: MutationStoreType) => {
-    store.data = undefined
-    store.body = undefined
-    store.setStatus('idle')
+  const clear = (store: StoreType<MutationStoreType>) => {
+    store({
+      data: undefined,
+      body: undefined,
+      status: 'idle',
+      isLoading: false,
+      isError: false,
+      isSuccess: false
+    })
   }
 
   return {
     state,
-    method: { mutate, mutateSync, setRes, cancel, clear }
+    method: { mutate, mutateSync, cancel, clear }
   }
 }

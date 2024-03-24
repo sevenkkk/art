@@ -20,7 +20,7 @@ export function _getFetchRequest(
   requestInit?: RequestInit
 ): Promise<any> {
   let input = url
-  if (!url.startsWith('/')) {
+  if (!url.startsWith('/') && !url.startsWith('http')) {
     input = `/${input}`
   }
   if (Art.config.baseURL) {
