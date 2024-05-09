@@ -42,7 +42,7 @@ export function getQueryConfig<TData, TBody>(
     autoClear: false,
     cacheTime: 300000,
     revalidate: 0,
-    retry: 3,
+    retry: 0,
     showMessage: false,
     showSuccessMessage: false,
     showErrorMessage: true
@@ -104,7 +104,7 @@ export async function doRequest<T, P>(
   // 发送请求
   let myRes: UseResult<T>
 
-  let retryCount = config.retry ?? 3
+  let retryCount = config.retry ?? 0
   const requestFun = async () => {
     retryCount--
     let result1: UseResult<T>

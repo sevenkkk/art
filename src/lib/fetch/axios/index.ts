@@ -63,8 +63,8 @@ export function handleAxiosError(e: any) {
   return {
     success: false,
     status: 500,
-    code: '-1000',
-    message: e,
+    code: e?.code ?? 'UNKNOWN_ERROR',
+    message: e?.message ?? 'Unknown Error',
     isCancel: false
   }
 }

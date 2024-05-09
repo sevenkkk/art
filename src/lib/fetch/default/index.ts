@@ -26,13 +26,13 @@ export function _getFetchRequest(
   if (Art.config.baseURL) {
     input = `${Art.config.baseURL}${input}`
   }
-  return fetch(input, {
-    headers: {
-      'Content-Type': 'application/json'
-    },
+  const myFetch = Art.config.fetch?.fetch ?? fetch
+  const baseInit = Art.config.fetch?.requestInit ? Art.config.fetch!.requestInit() : {}
+  return myFetch(input, {
+    ...baseInit,
     ...(requestInit ?? {}),
     method: method,
-    body: JSON.stringify(body)
+    body: Art.config.postBody ? Art.config.postBody(body) : JSON.stringify(body)
   })
 }
 

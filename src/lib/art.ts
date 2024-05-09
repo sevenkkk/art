@@ -8,6 +8,10 @@ const _localStorage: any =
 
 export interface ArtConfigOptions {
   baseURL?: string
+  fetch?: {
+    fetch?: typeof fetch
+    requestInit?: () => RequestInit
+  }
   axios?: {
     axios: AxiosStatic // axios 对象
     instance?: AxiosInstance // axios 实例
@@ -17,6 +21,7 @@ export interface ArtConfigOptions {
   showSuccessMessage?: (res: UseResult) => void // 显示成功消息
   startLoading?: () => void
   endLoading?: () => void
+  postBody?: (body: any) => any // 转换body
   convertRes?: (res: any, mode: RequestMode) => ResultType
   convertError?: (res: any, defaultResult: UseResult) => Partial<UseResult>
   convertPage?: (pageInfo: {
@@ -40,6 +45,16 @@ export class Art {
 
   // Default global configuration
   static config: ArtConfigOptions = {
+    fetch: {
+      fetch: fetch,
+      requestInit: () => {
+        return {
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        }
+      }
+    },
     showErrorMessage: (res) => {
       console.log(res)
     },
