@@ -10,7 +10,7 @@ export interface ArtConfigOptions {
   baseURL?: string
   fetch?: {
     fetch?: typeof fetch
-    requestInit?: () => RequestInit
+    requestInit?: (url: string) => RequestInit
   }
   axios?: {
     axios: AxiosStatic // axios 对象
