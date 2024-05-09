@@ -27,12 +27,12 @@ export function _getFetchRequest(
     input = `${Art.config.baseURL}${input}`
   }
   const myFetch = Art.config.fetch?.fetch ?? fetch
-  const baseInit = Art.config.fetch?.requestInit ? Art.config.fetch!.requestInit(input) : {}
+  const baseInit = Art.config.fetch?.requestInit ? Art.config.fetch!.requestInit(input, method, body) : {}
   return myFetch(input, {
+    body: JSON.stringify(body),
     ...baseInit,
     ...(requestInit ?? {}),
-    method: method,
-    body: Art.config.postBody ? Art.config.postBody(body) : JSON.stringify(body)
+    method: method
   })
 }
 
