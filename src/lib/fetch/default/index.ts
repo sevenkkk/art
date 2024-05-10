@@ -10,7 +10,11 @@ export function getFetchRequest(
   const controller = new AbortController()
   const config = { signal: controller.signal, ...(customConfig ?? {}) }
   const request = () => _getFetchRequest(method, url, body, config)
-  return { request, cancel: () => controller.abort() }
+  return {
+    request, cancel: () => {
+      controller.abort('user cancel')
+    }
+  }
 }
 
 export function _getFetchRequest(
@@ -38,11 +42,11 @@ export function _getFetchRequest(
 
 export function handleFetchError(e: any) {
   if (
-    typeof e === 'object' &&
-    e instanceof DOMException &&
-    e.message.includes('The user aborted a request')
+    (typeof e === 'object' &&
+      e instanceof DOMException &&
+      e.message.includes('The user aborted a request')) || typeof e === 'string' && e === 'user cancel'
   ) {
-    return { success: false, isCancel: true, message: e.message }
+    return { success: false, isCancel: true, message: 'user cancel' }
   } else {
     return {
       success: false,

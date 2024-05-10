@@ -133,9 +133,7 @@ export function QueryPlugin<TData, TBody>(
   }
 
   const cancel = (store: StoreType<QueryStoreType>) => {
-    if (currentRequest?.isFetch) {
-      fetchCancel(store, abortController, currentRequest)
-    }
+    fetchCancel(store, abortController, currentRequest)
   }
 
   const clear = (store: StoreType<QueryStoreType<TData, TBody>>) => {

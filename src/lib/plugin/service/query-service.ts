@@ -189,6 +189,7 @@ export async function doRequest<T, P>(
         try {
           resolve(await requestFun())
         } catch (e) {
+          console.log(e)
           // 处理异常
           myRes = handleRequestCatch(e, request.type) as UseResult<T>
           if (!myRes.isCancel && retryCount > 0) {

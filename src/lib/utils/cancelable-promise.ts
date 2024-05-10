@@ -23,6 +23,7 @@ export const CancelablePromise = <T>(
     if (_isExecResolve) {
       return
     }
+    abortSignal.removeEventListener('abort', () => {})
     // 抛出错误
     _reject({ message: 'cancel' })
   })
