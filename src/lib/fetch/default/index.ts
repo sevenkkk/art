@@ -27,7 +27,7 @@ export function _getFetchRequest(
     input = `${Art.config.baseURL}${input}`
   }
   const myFetch = Art.config.fetch?.fetch ?? fetch
-  const baseInit = Art.config.fetch?.requestInit ? Art.config.fetch!.requestInit(input, method, body) : {}
+  const baseInit = Art.config.fetch?.requestInit ? (Art.config.fetch!.requestInit(input, method, body)) : {}
   return myFetch(input, {
     body: JSON.stringify(body),
     ...baseInit,
