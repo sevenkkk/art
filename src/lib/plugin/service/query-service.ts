@@ -104,7 +104,7 @@ export async function doRequest<T, P>(
   // 发送请求
   let myRes: UseResult<T>
 
-  let retryCount = config.retry ?? 0
+  let retryCount = config.retry ? config.retry : (config.retryInterval ? 999999999 : 0)
   const requestFun = async () => {
     retryCount--
     let result1: UseResult<T>
