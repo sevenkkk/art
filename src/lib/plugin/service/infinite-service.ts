@@ -64,7 +64,11 @@ export async function doRequestByInfiniteQuery<T extends Array<unknown>, P>(
   // 发送请求
   let myRes: UseResult<T>
 
-  let retryCount = config.retry ? config.retry : (config.retryInterval ? 999999999 : 0)
+  let retryCount = config.retry
+    ? config.retry
+    : config.retryInterval
+    ? 999999999
+    : 0
   const requestFun = async () => {
     let result1: UseResult<T>
     // 请求接口
@@ -74,7 +78,7 @@ export async function doRequestByInfiniteQuery<T extends Array<unknown>, P>(
 
     // 转换数据
     if (convertRes) {
-      const result = convertRes(res, request.type)
+      const result = convertRes(res, request)
       if (isPromiseLike(result)) {
         result1 = (await result) as UseResult<T>
       } else {
@@ -107,8 +111,8 @@ export async function doRequestByInfiniteQuery<T extends Array<unknown>, P>(
           const hasNextPage = config.hasNextPage
             ? config.hasNextPage(res)
             : config.getNextToken
-              ? !!nextToken
-              : result1.data?.length === store.pageSize
+            ? !!nextToken
+            : result1.data?.length === store.pageSize
           const pageTokens = config.getNextToken
             ? nextToken
               ? [...store.pageTokens.splice(0, store.current), nextToken]
@@ -249,7 +253,11 @@ export async function doRequestByInfinite<T extends Array<unknown>, P>(
   // 发送请求
   let myRes: UseResult<T>
 
-  let retryCount = config.retry ? config.retry : (config.retryInterval ? 999999999 : 0)
+  let retryCount = config.retry
+    ? config.retry
+    : config.retryInterval
+    ? 999999999
+    : 0
   const requestFun = async () => {
     let result1: UseResult<T>
     // 请求接口
@@ -259,7 +267,7 @@ export async function doRequestByInfinite<T extends Array<unknown>, P>(
 
     // 转换数据
     if (convertRes) {
-      const result = convertRes(res, request.type)
+      const result = convertRes(res, request)
       if (isPromiseLike(result)) {
         result1 = (await result) as UseResult<T>
       } else {
@@ -286,8 +294,8 @@ export async function doRequestByInfinite<T extends Array<unknown>, P>(
       const hasNextPage = config.hasNextPage
         ? config.hasNextPage(res)
         : config.getNextToken
-          ? !!nextToken
-          : result1.data?.length === store.pageSize
+        ? !!nextToken
+        : result1.data?.length === store.pageSize
       const pageTokens = config.getNextToken
         ? nextToken
           ? [...store.pageTokens.splice(0, store.current), nextToken]
@@ -298,9 +306,9 @@ export async function doRequestByInfinite<T extends Array<unknown>, P>(
         store({
           data: infinite
             ? ([
-              ...((store.data ?? []) as Array<any>),
-              ...((postData ?? []) as Array<any>)
-            ] as any)
+                ...((store.data ?? []) as Array<any>),
+                ...((postData ?? []) as Array<any>)
+              ] as any)
             : ((postData ?? []) as Array<any>),
           ...status,
           total: result1.total ?? 0,

@@ -86,7 +86,7 @@ export type FetchConfig<TData = unknown, TBody = unknown> = {
   onSuccess?: (data: TData, cache: boolean, isSome?: boolean) => void
   onError?: (res: UseResult<TData>) => void // 失败回调
   onComplete?: (res: UseResult<TData>) => void // 完成回调
-  convertRes?: (res: any, mode: RequestMode) => ResultType // 请求响应体转换
+  convertRes?: (res: any, request: RequestResult) => ResultType // 请求响应体转换
   postData?: (data: any) => TData // data转换
   loadingDelayMs?: number // 延迟loading时间
   debounceMs?: number // 防抖时间

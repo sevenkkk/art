@@ -1,4 +1,4 @@
-import { CachedData, Method, RequestMode, UseResult } from './model'
+import { CachedData, Method, RequestResult, UseResult } from './model'
 import { type AxiosInstance, type AxiosStatic } from 'axios'
 
 export type ResultType = UseResult | Promise<UseResult>
@@ -10,7 +10,7 @@ export interface ArtConfigOptions {
   baseURL?: string
   fetch?: {
     fetch?: typeof fetch
-    requestInit?: (url: string, method: Method, body: any) => RequestInit,
+    requestInit?: (url: string, method: Method, body: any) => RequestInit
   }
   axios?: {
     axios: AxiosStatic // axios 对象
@@ -21,7 +21,7 @@ export interface ArtConfigOptions {
   showSuccessMessage?: (res: UseResult) => void // 显示成功消息
   startLoading?: () => void
   endLoading?: () => void
-  convertRes?: (res: any, mode: RequestMode) => ResultType
+  convertRes?: (res: any, request: RequestResult) => ResultType
   convertError?: (res: any, defaultResult: UseResult) => Partial<UseResult>
   convertPage?: (pageInfo: {
     current: number

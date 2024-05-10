@@ -149,7 +149,8 @@ export function handleMessage<T, P>(config: FetchConfig<T, P>, res: UseResult) {
   } else if (
     !res.success &&
     (config.showErrorMessage || config.showMessage) &&
-    Art.config.showErrorMessage
+    Art.config.showErrorMessage &&
+    !res.isCancel
   ) {
     if (config.errorMessage) {
       res.message = config.errorMessage
@@ -196,7 +197,6 @@ export function handleRequestCatch(e: any, mode: RequestMode): UseResult {
   if (Art.config.handleHttpError) {
     Art.config.handleHttpError(e)
   }
-  console.log(e)
   return result ?? { success: false }
 }
 
@@ -208,8 +208,11 @@ export function fetchCancel(
   if (currentRequest?.cancel) {
     currentRequest?.cancel!()
   }
-  abortController.abort()
-  store.setStatus('idle')
+  if (currentRequest?.isFetch) {
+    store.setStatus('idle')
+  } else {
+    abortController.abort()
+  }
 }
 
 /**
@@ -338,7 +341,13 @@ export function debounce<R, P>(
       } else {
         request(body, config).then(resolve).catch(reject)
       }
-    }, abortController.signal)
+    }, abortController.signal).catch((e) => {
+      if (typeof e === 'object' && e.message === 'cancel') {
+        clearTimeout(timeout)
+        return { success: false, isCancel: true, message: 'user cancel' }
+      }
+      return e
+    })
   }
 }
 
@@ -376,7 +385,13 @@ export function throttle<R, P>(
           request(body, config).then(resolve).catch(reject)
         }, waitMs)
       }
-    }, abortController.signal)
+    }, abortController.signal).catch((e) => {
+      if (typeof e === 'object' && e.message === 'cancel') {
+        clearTimeout(timeout)
+        return { success: false, isCancel: true, message: 'user cancel' }
+      }
+      return e
+    })
   }
 }
 
@@ -517,7 +532,8 @@ export function resultDataIsSame<T>(newData: T, oldData?: T) {
     if (oldData && newData) {
       return JSON.stringify(newData) === JSON.stringify(oldData)
     }
-  } catch (e) {}
+  } catch (e) {
+  }
   return false
 }
 
