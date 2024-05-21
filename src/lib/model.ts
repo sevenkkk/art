@@ -312,6 +312,7 @@ export type RequestMode = 'customize' | 'default' | 'axios'
 
 export type RequestResult = {
   type: RequestMode
+  url?: string
   isFetch?: boolean
   request: () => Promise<any>
   cancel?: () => void

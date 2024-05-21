@@ -288,6 +288,7 @@ export function getRequest(
   return {
     request: _request!,
     type,
+    url,
     cancel: _cancel
   }
 }
@@ -532,8 +533,7 @@ export function resultDataIsSame<T>(newData: T, oldData?: T) {
     if (oldData && newData) {
       return JSON.stringify(newData) === JSON.stringify(oldData)
     }
-  } catch (e) {
-  }
+  } catch (e) {}
   return false
 }
 
