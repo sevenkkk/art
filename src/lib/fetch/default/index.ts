@@ -11,7 +11,8 @@ export function getFetchRequest(
   const config = { signal: controller.signal, ...(customConfig ?? {}) }
   const request = () => _getFetchRequest(method, url, body, config)
   return {
-    request, cancel: () => {
+    request,
+    cancel: () => {
       controller.abort('user cancel')
     }
   }
@@ -31,20 +32,36 @@ export function _getFetchRequest(
     input = `${Art.config.baseURL}${input}`
   }
   const myFetch = Art.config.fetch?.fetch ?? fetch
-  const baseInit = Art.config.fetch?.requestInit ? (Art.config.fetch!.requestInit(input, method, body)) : {}
+  const baseInit = Art.config.fetch?.requestInit
+    ? Art.config.fetch!.requestInit(input, method, body)
+    : {}
   return myFetch(input, {
     body: JSON.stringify(body),
     ...baseInit,
     ...(requestInit ?? {}),
     method: method
+  }).then((res) => {
+    if (res.status === 500) {
+      throw res
+    }
+    return res
   })
 }
 
 export function handleFetchError(e: any) {
+  if (e instanceof Response) {
+    return {
+      success: false,
+      status: e.status,
+      message: e.statusText,
+      isCancel: false
+    }
+  }
   if (
     (typeof e === 'object' &&
       e instanceof DOMException &&
-      e.message.includes('The user aborted a request')) || typeof e === 'string' && e === 'user cancel'
+      e.message.includes('The user aborted a request')) ||
+    (typeof e === 'string' && e === 'user cancel')
   ) {
     return { success: false, isCancel: true, message: 'user cancel' }
   } else {
