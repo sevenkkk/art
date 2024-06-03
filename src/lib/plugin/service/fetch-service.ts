@@ -139,7 +139,8 @@ export const getError = (res?: UseResult): ErrorType | undefined => {
 export function handleMessage<T, P>(config: FetchConfig<T, P>, res: UseResult) {
   if (
     res.success &&
-    (config.showSuccessMessage || config.showMessage) &&
+    config.showSuccessMessage &&
+    config.showMessage &&
     Art.config.showSuccessMessage
   ) {
     if (config.successMessage) {
@@ -148,7 +149,8 @@ export function handleMessage<T, P>(config: FetchConfig<T, P>, res: UseResult) {
     Art.config.showSuccessMessage(res)
   } else if (
     !res.success &&
-    (config.showErrorMessage || config.showMessage) &&
+    config.showErrorMessage &&
+    config.showMessage &&
     Art.config.showErrorMessage &&
     !res.isCancel
   ) {
