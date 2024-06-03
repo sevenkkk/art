@@ -11,6 +11,7 @@ export interface ArtConfigOptions {
   fetch?: {
     fetch?: typeof fetch
     requestInit?: (url: string, method: Method, body: any) => RequestInit
+    errorStatus?: number[]
   }
   axios?: {
     axios: AxiosStatic // axios 对象

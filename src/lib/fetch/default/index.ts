@@ -41,7 +41,9 @@ export function _getFetchRequest(
     ...(requestInit ?? {}),
     method: method
   }).then((res) => {
-    if (res.status === 500) {
+    if (
+      Art.config.fetch?.errorStatus?.some((status) => res.status === status)
+    ) {
       throw res
     }
     return res
