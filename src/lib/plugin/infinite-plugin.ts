@@ -96,6 +96,9 @@ export const InfinitePlugin = <TData extends Array<unknown>, TBody>(
     body?: Partial<TBody>,
     runConfig?: FetchRunConfig
   ) => {
+    if (currentRequest?.cancel) {
+      currentRequest?.cancel!()
+    }
     const requestFun = (body?: Partial<TBody>, runConfig?: FetchRunConfig) => {
       const myConfig = { ...config, ...runConfig }
       // 清除

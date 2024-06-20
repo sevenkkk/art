@@ -104,7 +104,8 @@ export async function doRequestByInfiniteQuery<T extends Array<unknown>, P>(
         error: undefined
       }
       if (config.isDefaultSet) {
-        if (!resultDataIsSame(postData, store.data)) {
+        const isSome = resultDataIsSame(postData, store.data)
+        if (!isSome) {
           const nextToken = config.getNextToken
             ? config.getNextToken(res)
             : undefined
@@ -130,7 +131,10 @@ export async function doRequestByInfiniteQuery<T extends Array<unknown>, P>(
             ...status
           })
         } else {
-          store({ isLoading: false })
+          store({
+            lastRequestTime,
+            ...status
+          })
         }
       } else {
         store({
