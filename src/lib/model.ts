@@ -121,6 +121,10 @@ export type StorePageConfig = {
 }
 
 export type StoreInfiniteConfig = {
+  defaultNextToken?: string // 默认nextToken
+  defaultHasNextPage?: boolean
+  total?: number // 总页码
+  current?: number // 当前页码
   pageSize?: number // 每页个数
   infinite?: boolean // 是否无限
   getNextToken?: (res: any) => string

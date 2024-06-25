@@ -37,12 +37,14 @@ export const InfinitePlugin = <TData extends Array<unknown>, TBody>(
   // 初始化状态
   const state = {
     lastRequestTime: undefined,
-    current: 1,
+    current: config?.current ?? 1,
     pageSize: config?.pageSize ?? 10,
-    total: 0,
-    pageTokens: [undefined],
+    total: config?.total ?? 0,
+    pageTokens: config?.defaultNextToken
+      ? [undefined, config?.defaultNextToken]
+      : [undefined],
     isFetchingNextPage: false,
-    hasNextPage: false,
+    hasNextPage: config?.defaultHasNextPage ?? false,
     isLoadingNextPage: false,
     isErrorNextPage: false
   }
