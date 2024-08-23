@@ -22,7 +22,6 @@ import {
   handleRequestCatch,
   handleStartLoading,
   isPromiseLike,
-  resultDataIsSame,
   setStoreCacheData,
   waitTime
 } from './fetch-service'
@@ -148,21 +147,13 @@ export async function doRequest<T, P>(
         error: undefined
       }
       result1.isSame = true
-      const isSome = resultDataIsSame(postData, store.data)
       if (config.isDefaultSet) {
-        if (!isSome) {
-          store({
-            lastRequestTime,
-            originData: result1.data,
-            data: postData,
-            ...status
-          })
-        } else {
-          store({
-            lastRequestTime,
-            ...status
-          })
-        }
+        store({
+          lastRequestTime,
+          originData: result1.data,
+          data: postData,
+          ...status
+        })
       } else {
         store({
           lastRequestTime,
