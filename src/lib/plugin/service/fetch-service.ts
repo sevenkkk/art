@@ -511,9 +511,7 @@ export function getCacheRequest<R, P>(
   //   } catch (e) {}
   // }
 
-  if (!resultDataIsSame(cache.data, store.data)) {
-    store({ data: cache.data, body: cache.body })
-  }
+  store({ data: cache.data, body: cache.body })
 
   // 控制新鲜度, 如果过期新鲜度
   const revalidate = config.revalidate ?? 0
@@ -528,15 +526,6 @@ export function getCacheRequest<R, P>(
     })
   }
   return new Promise((resolve) => resolve({ data: cache.data, success: true }))
-}
-
-export function resultDataIsSame<T>(newData: T, oldData?: T) {
-  try {
-    if (oldData && newData) {
-      return JSON.stringify(newData) === JSON.stringify(oldData)
-    }
-  } catch (e) {}
-  return false
 }
 
 export function getCacheKey<R, P>(

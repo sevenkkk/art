@@ -79,8 +79,8 @@ export function makePagination<
 }
 
 export function makeMutation<
-  TData = Record<string, any> | string,
-  TBody = Record<string, any>
+  TBody = Record<string, any>,
+  TData = Record<string, any> | string
 >(
   request: RequestType<TBody>,
   config?: QueryConfig<TData, TBody>

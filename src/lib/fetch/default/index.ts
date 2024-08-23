@@ -37,6 +37,9 @@ export function _getFetchRequest(
     : {}
   return myFetch(input, {
     body: JSON.stringify(body),
+    headers: {
+      'Content-Type': 'application/json'
+    },
     ...baseInit,
     ...(requestInit ?? {}),
     method: method
