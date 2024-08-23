@@ -21,7 +21,6 @@ import {
   handleRequestCatch,
   handleStartLoading,
   isPromiseLike,
-  resultDataIsSame,
   setStoreCacheData,
   waitTime
 } from './fetch-service'
@@ -104,38 +103,30 @@ export async function doRequestByInfiniteQuery<T extends Array<unknown>, P>(
         error: undefined
       }
       if (config.isDefaultSet) {
-        const isSome = resultDataIsSame(postData, store.data)
-        if (!isSome) {
-          const nextToken = config.getNextToken
-            ? config.getNextToken(res)
-            : undefined
-          const hasNextPage = config.hasNextPage
-            ? config.hasNextPage(res)
-            : config.getNextToken
-            ? !!nextToken
-            : result1.data?.length === store.pageSize
-          const pageTokens = config.getNextToken
-            ? nextToken
-              ? [...store.pageTokens.splice(0, store.current), nextToken]
-              : store.pageTokens.splice(0, store.current)
-            : [undefined]
-          store({
-            lastRequestTime,
-            data: postData,
-            current: 1,
-            total: result1.total ?? 0,
-            pageTokens,
-            hasNextPage,
-            isLoadingNextPage: false,
-            isErrorNextPage: false,
-            ...status
-          })
-        } else {
-          store({
-            lastRequestTime,
-            ...status
-          })
-        }
+        const nextToken = config.getNextToken
+          ? config.getNextToken(res)
+          : undefined
+        const hasNextPage = config.hasNextPage
+          ? config.hasNextPage(res)
+          : config.getNextToken
+          ? !!nextToken
+          : result1.data?.length === store.pageSize
+        const pageTokens = config.getNextToken
+          ? nextToken
+            ? [...store.pageTokens.splice(0, store.current), nextToken]
+            : store.pageTokens.splice(0, store.current)
+          : [undefined]
+        store({
+          lastRequestTime,
+          data: postData,
+          current: 1,
+          total: result1.total ?? 0,
+          pageTokens,
+          hasNextPage,
+          isLoadingNextPage: false,
+          isErrorNextPage: false,
+          ...status
+        })
       } else {
         store({
           lastRequestTime,
