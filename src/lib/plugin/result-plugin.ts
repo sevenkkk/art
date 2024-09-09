@@ -5,7 +5,7 @@ import {
   RequestType
 } from '../model'
 import { PluginReturn, StoreType } from '../utils/plugin-utils'
-import { getStoreCacheData } from './service/fetch-service'
+import { getStoreCacheData, setStoreCacheData } from './service/fetch-service'
 
 export function ResultPlugin<TData, TBody>(
   request: RequestType<TBody>,
@@ -34,11 +34,18 @@ export function ResultPlugin<TData, TBody>(
     data?: TData extends object ? Partial<TData> : TData,
     replace?: boolean
   ) => {
+    const setCacheHandle = () => {
+      setStoreCacheData(config, request, store, {
+        success: true,
+        data: store.data
+      })
+    }
     // 如果请求数据为空
     if (!data || (Array.isArray(data) && !data.length)) {
       // 无数据是显示的内容
       if (_placeholderData) {
         store.data = _placeholderData
+        setCacheHandle()
         return
       }
     }
@@ -47,11 +54,13 @@ export function ResultPlugin<TData, TBody>(
         const { data: oldData } = store
         // @ts-ignore
         store.data = { ...(oldData ?? {}), ...data }
+        setCacheHandle()
         return
       }
     }
     // @ts-ignore
     store.data = data
+    setCacheHandle()
   }
 
   /**
