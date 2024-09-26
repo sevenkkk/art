@@ -188,11 +188,7 @@ export const InfinitePlugin = <TData extends Array<unknown>, TBody>(
     const requestFun = (body?: Partial<TBody>, runConfig?: FetchRunConfig) => {
       const myConfig = { ...config, ...runConfig }
       if (pageConfig?.current) {
-        if (pageConfig?.current > store.current + 1) {
-          store.current = 1
-        } else {
-          store.current = pageConfig?.current
-        }
+        store.current = pageConfig?.current
       } else {
         store.current = store.current + 1
       }

@@ -28,7 +28,7 @@ export function _getFetchRequest(
   if (!url.startsWith('/') && !url.startsWith('http')) {
     input = `/${input}`
   }
-  if (Art.config.baseURL) {
+  if (Art.config.baseURL && !input.startsWith('http')) {
     input = `${Art.config.baseURL}${input}`
   }
   const myFetch = Art.config.fetch?.fetch ?? fetch

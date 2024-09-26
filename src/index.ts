@@ -13,6 +13,7 @@ import { useAutoQuery, useAutoMutate } from './lib/hooks'
 
 export * from './lib/art-provider'
 export * from './lib/model'
+export { StoreType } from './lib/utils/plugin-utils'
 export {
   Art,
   ArtConfigOptions,
