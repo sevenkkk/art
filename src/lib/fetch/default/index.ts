@@ -72,9 +72,9 @@ export function handleFetchError(e: any) {
   } else {
     return {
       success: false,
-      status: 500,
-      code: '',
-      message: 'unknown error',
+      status: 1000,
+      code: 'UNKNOWN_ERROR',
+      message: e instanceof Error ? e.message ?? e.stack : 'Unknown Error',
       isCancel: false
     }
   }

@@ -8,7 +8,11 @@ export function getAxiosRequest(
   customConfig?: any
 ) {
   const source = Art.axios?.CancelToken.source()
-  const config = { cancelToken: source?.token, ...(customConfig ?? {}) }
+  const config = {
+    cancelToken: source?.token,
+    baseURL: Art.config.baseURL,
+    ...(customConfig ?? {})
+  }
   const request = () => _getAxiosRequest(method, url, body, config)
   return { request, cancel: () => source?.cancel() }
 }
@@ -62,9 +66,9 @@ export function handleAxiosError(e: any) {
   }
   return {
     success: false,
-    status: 500,
+    status: 1000,
     code: e?.code ?? 'UNKNOWN_ERROR',
-    message: e?.message ?? 'Unknown Error',
+    message: e instanceof Error ? e.message ?? e.stack : 'Unknown Error',
     isCancel: false
   }
 }

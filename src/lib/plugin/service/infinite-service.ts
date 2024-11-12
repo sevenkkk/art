@@ -119,6 +119,7 @@ export async function doRequestByInfiniteQuery<T extends Array<unknown>, P>(
         store({
           lastRequestTime,
           data: postData,
+          originData: result1.data,
           current: 1,
           total: result1.total ?? 0,
           pageTokens,

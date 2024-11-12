@@ -93,6 +93,10 @@ export class Art {
     }
   }
 
+  static setBaseUrl(url: string) {
+    this.config = { ...this.config, baseURL: url }
+  }
+
   /**
    * Set global configuration
    * @param config
@@ -106,9 +110,7 @@ export class Art {
         if (instance) {
           this.axiosInstance = this.config.axios.instance
         } else {
-          this.axiosInstance = axios.create({
-            baseURL: this.config.baseURL
-          })
+          this.axiosInstance = axios.create()
         }
         if (instanceCallback) {
           instanceCallback(this.axiosInstance!)

@@ -510,8 +510,9 @@ export function getCacheRequest<R, P>(
   //     _store.offset = offset
   //   } catch (e) {}
   // }
-
-  store({ data: cache.data, body: cache.body })
+  if (!config.initializeCache) {
+    store({ data: cache.data, body: cache.body })
+  }
 
   // 控制新鲜度, 如果过期新鲜度
   const revalidate = config.revalidate ?? 0
