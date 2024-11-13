@@ -300,6 +300,7 @@ export async function doRequestByInfinite<T extends Array<unknown>, P>(
       const infinite = config.infinite ?? false
       if (config.isDefaultSet) {
         store({
+          originData: result1.data,
           data: infinite
             ? ([
                 ...((store.data ?? []) as Array<any>),
